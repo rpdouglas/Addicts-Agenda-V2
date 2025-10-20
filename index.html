@@ -45,8 +45,8 @@
         // --- APPLICATION VERSIONING ---
         const APP_VERSIONS = {
             DASHBOARD: '1.2.0',
-            JOURNAL: '1.4.0', // UPDATED: Typing fix applied
-            GOALS: '1.1.0', // UPDATED: Typing fix applied
+            JOURNAL: '1.5.0', // UPDATED: Full-screen edit implemented
+            GOALS: '1.1.0',
             COPING: '1.1.0',
             WORKBOOK: '1.4.1',
             LITERATURE: '1.1.0',
@@ -351,6 +351,11 @@
                 const [isLoading, setIsLoading] = useState(true);
                 const [showGeminiHelper, setShowGeminiHelper] = useState(false);
                 const [selectedTemplateId, setSelectedTemplateId] = useState('');
+                
+                // For editing Journal entries
+                const [isEditingExisting, setIsEditingExisting] = useState(false);
+                const [itemToEditId, setItemToEditId] = useState(null);
+
 
                 // Persistence handler
                 const saveItemsToLocal = useCallback((updatedItems) => {
@@ -392,21 +397,47 @@
                     }
                     setSelectedTemplateId('');
                 };
+                
+                // --- JOURNALING LOGIC ---
 
-                // CRUD Handlers
-                const handleAddItem = (e) => {
+                const handleStartEditJournal = (item) => {
+                    setItemToEditId(item.id);
+                    setNewItem(item.text);
+                    setIsEditingExisting(true);
+                };
+
+                const handleCancelEditJournal = () => {
+                    setItemToEditId(null);
+                    setNewItem('');
+                    setIsEditingExisting(false);
+                };
+
+                const handleSaveNewEntry = (e) => {
                     e.preventDefault();
                     if (newItem.trim() === '') return;
-                    const newItemObject = { 
-                        id: LocalDataStore.generateId(), 
-                        text: newItem, 
-                        timestamp: new Date()
-                    };
-                    if (config.hasCompleted) newItemObject.completed = false;
                     
-                    saveItemsToLocal([newItemObject, ...items]);
-                    setNewItem('');
+                    if (isEditingExisting && itemToEditId) {
+                        // --- UPDATE EXISTING ENTRY (Journal/Goals) ---
+                        const updatedItems = items.map(item => 
+                            item.id === itemToEditId ? { ...item, text: newItem, timestamp: new Date() } : item
+                        );
+                        saveItemsToLocal(updatedItems);
+                        handleCancelEditJournal(); // Clear edit state
+                    } else {
+                        // --- ADD NEW ENTRY ---
+                        const newItemObject = { 
+                            id: LocalDataStore.generateId(), 
+                            text: newItem, 
+                            timestamp: new Date()
+                        };
+                        if (config.hasCompleted) newItemObject.completed = false;
+                        
+                        saveItemsToLocal([newItemObject, ...items]);
+                        setNewItem('');
+                    }
                 };
+                
+                // --- GOALS LOGIC (Stays inline editing for simplicity) ---
 
                 const handleToggleCompleted = (item) => {
                     if (!config.hasCompleted) return;
@@ -420,13 +451,13 @@
                     const updatedItems = items.filter(item => item.id !== id);
                     saveItemsToLocal(updatedItems);
                 };
-
-                const handleEdit = (item) => {
+                
+                const handleEditGoals = (item) => { // Used for Goals module only
                     setEditingItem(item);
                     setEditedText(item.text);
                 };
 
-                const handleUpdateItem = (e) => {
+                const handleUpdateGoals = (e) => { // Used for Goals module only
                     e.preventDefault();
                     if (!editingItem || editedText.trim() === '') return;
 
@@ -438,11 +469,20 @@
                     setEditingItem(null);
                     setEditedText('');
                 };
+                
+                // --- RENDER FUNCTIONS ---
 
-                const NewEntryForm = () => (
-                    <form onSubmit={handleAddItem} className="mb-2 space-y-2">
+                const JournalForm = () => (
+                    <form onSubmit={handleSaveNewEntry} className="mb-2 space-y-2">
+                        
+                        {isEditingExisting && (
+                            <p className="text-sm font-semibold text-teal-700 mb-2">
+                                Editing Existing Entry: {items.find(i => i.id === itemToEditId)?.timestamp.toLocaleString()}
+                            </p>
+                        )}
+                        
                         {/* Template Selector (Only for Journal) */}
-                        {isJournal && (
+                        {!isEditingExisting && isJournal && (
                             <div className="flex gap-2">
                                 <select 
                                     value={selectedTemplateId} 
@@ -468,31 +508,37 @@
 
 
                         {/* Input/Textarea field - USING DEBOUNCED COMPONENT */}
-                        {isJournal ? (
-                            <DebouncedTextarea
-                                value={newItem}
-                                onChange={setNewItem} // Passes the debounced value to parent state
-                                placeholder={config.placeholder}
-                                rows="10" 
-                                isInput={false}
-                            />
-                        ) : (
-                            <DebouncedTextarea
-                                value={newItem}
-                                onChange={setNewItem} // Passes the debounced value to parent state
-                                placeholder={config.placeholder}
-                                isInput={true}
-                            />
-                        )}
+                        <DebouncedTextarea
+                            value={newItem}
+                            onChange={setNewItem} // Passes the debounced value to parent state
+                            placeholder={config.placeholder}
+                            rows={isJournal ? "10" : "1"} 
+                            isInput={!isJournal}
+                        />
 
                         {/* Submit button(s) */}
-                        <div className={`flex ${isJournal ? 'justify-end' : 'gap-2'}`}>
-                            {isJournal ? (
-                                <button type="submit" className="w-full bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700">Add Journal Entry</button>
-                            ) : (
-                                <button type="submit" className="bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700">Add</button>
+                        <div className={`flex justify-end gap-2`}>
+                            {isEditingExisting && (
+                                <button type="button" onClick={handleCancelEditJournal} className="bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-lg shadow-md hover:bg-gray-400">
+                                    Cancel Edit
+                                </button>
                             )}
+                            <button type="submit" className="bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700">
+                                {isEditingExisting ? 'Save Changes' : 'Add New Entry'}
+                            </button>
                         </div>
+                    </form>
+                );
+                
+                const GoalsForm = () => (
+                    <form onSubmit={handleSaveNewEntry} className="flex gap-2 mb-6">
+                         <DebouncedTextarea
+                            value={newItem}
+                            onChange={setNewItem}
+                            placeholder={config.placeholder}
+                            isInput={true}
+                        />
+                        <button type="submit" className="bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 transition-colors">Add</button>
                     </form>
                 );
 
@@ -502,7 +548,7 @@
                         <h2 className="text-2xl font-bold text-gray-800 mb-4">{config.title}</h2> 
                         <p className="text-gray-600 mb-6">{config.prompt}</p> 
                         
-                        <NewEntryForm />
+                        {isJournal ? <JournalForm /> : <GoalsForm />}
 
                         {config.useGemini && isJournal && (
                             <> 
@@ -518,13 +564,14 @@
                                 <ul className="space-y-3"> 
                                     {items.map(item => ( 
                                         <li key={item.id} className="p-4 bg-gray-50 rounded-lg shadow-sm">
-                                            {editingItem?.id === item.id ? (
-                                                <form onSubmit={handleUpdateItem} className="space-y-2">
+                                            {/* Goal editing (still inline for simplicity) */}
+                                            {config.collectionName === 'goals' && editingItem?.id === item.id ? (
+                                                <form onSubmit={handleUpdateGoals} className="space-y-2">
                                                     <textarea
                                                         value={editedText}
                                                         onChange={(e) => setEditedText(e.target.value)}
                                                         className="w-full p-2 border border-teal-500 rounded-lg resize-none"
-                                                        rows={isJournal ? 5 : 2}
+                                                        rows={2}
                                                     />
                                                     <div className="flex justify-end gap-2">
                                                         <button type="button" onClick={() => setEditingItem(null)} className="text-gray-500 hover:text-gray-700 text-sm font-semibold">Cancel</button>
@@ -537,13 +584,22 @@
                                                         {config.hasCompleted && <input type="checkbox" checked={item.completed} onChange={() => handleToggleCompleted(item)} className="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mr-4 flex-shrink-0 mt-1"/>}
                                                         <div className="flex-grow">
                                                             <p className={`text-gray-800 whitespace-pre-wrap ${item.completed ? 'line-through text-gray-400' : ''}`}>{item.text}</p>
+                                                            {/* Show formatted date/time */}
                                                             <p className="text-xs text-gray-400 mt-1">{item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Just now'}</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex justify-end mt-2 space-x-2">
-                                                        <button onClick={() => handleEdit(item)} className="text-gray-500 hover:text-blue-600 text-xs font-semibold flex items-center gap-1">
-                                                            <EditIcon /> Edit
-                                                        </button>
+                                                        {isJournal ? (
+                                                            // Journal edit loads to main box
+                                                            <button onClick={() => handleStartEditJournal(item)} className="text-gray-500 hover:text-blue-600 text-xs font-semibold flex items-center gap-1">
+                                                                <EditIcon /> Edit
+                                                            </button>
+                                                        ) : (
+                                                            // Goals edit loads inline
+                                                            <button onClick={() => handleEditGoals(item)} className="text-gray-500 hover:text-blue-600 text-xs font-semibold flex items-center gap-1">
+                                                                <EditIcon /> Edit
+                                                            </button>
+                                                        )}
                                                         <button onClick={() => handleDeleteItem(item.id)} className="text-gray-500 hover:text-red-500 text-xs font-semibold flex items-center gap-1">
                                                             <TrashIcon /> Delete
                                                         </button>
@@ -981,7 +1037,7 @@
             useEffect(() => {
                 const data = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
                 setResponse(data[questionKey] || '');
-                isInitialLoad.current = true;
+                setSaveStatus('Initial Load');
             }, [questionKey]);
 
             // 2. Debounce Save Effect (Runs whenever response changes after initial load)
