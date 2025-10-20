@@ -44,15 +44,30 @@
 
         // --- APPLICATION VERSIONING ---
         const APP_VERSIONS = {
-            DASHBOARD: '1.1.0', // UPDATED
+            DASHBOARD: '1.2.0',
             JOURNAL: '1.3.1',
             GOALS: '1.0.0',
             COPING: '1.1.0',
-            WORKBOOK: '1.4.0',
+            WORKBOOK: '1.4.1', // UPDATED VERSION
             LITERATURE: '1.1.0',
             RESOURCES: '1.0.0',
-            SETTINGS: '1.0.0', // NEW
+            SETTINGS: '1.0.0',
         };
+
+        // --- RECOVERY INSIGHTS/FACTS DATA ---
+        const RECOVERY_FACTS = [
+            "The Serenity Prayer was popularized by AA, but was originally written by theologian Reinhold Niebuhr.",
+            "AA's Big Book was first published in 1939 and its core text (the first 164 pages) remains unchanged.",
+            "The 12 Traditions were developed to guide AA groups in their relationships with the world, not just to guide the individual.",
+            "The motto 'Just for Today' is commonly used across many 12-Step fellowships to emphasize living in the present moment.",
+            "The first Narcotics Anonymous meeting was held in Southern California in 1953.",
+            "The concept of 'Higher Power' is intentionally non-religious and can be defined as 'God as we understood Him'.",
+            "The opposite of addiction is often cited as connection, emphasizing the importance of fellowship.",
+            "The 'HALT' acronym (Hungry, Angry, Lonely, Tired) is a fundamental tool for recognizing relapse triggers.",
+            "The Step 4 inventory is 'searching and fearless' because admitting the 'exact nature' of wrongs releases their power.",
+            "CA (Cocaine Anonymous) uses the same 12 Steps and 12 Traditions as AA.",
+        ];
+
 
         // --- Literature Data (Truncated for brevity, full content is in your source) ---
         const literatureData = {
@@ -150,6 +165,12 @@
 
         // --- COMPONENT: Dashboard ---
         const Dashboard = ({ onNavigate, sobrietyStartDate }) => {
+            // Select a random fact on component render
+            const randomFact = useMemo(() => {
+                const randomIndex = Math.floor(Math.random() * RECOVERY_FACTS.length);
+                return RECOVERY_FACTS[randomIndex];
+            }, []);
+
             const menuItems = [
                 { view: 'journal', label: 'Daily Journal', icon: <BookOpenIcon /> },
                 { view: 'goals', label: 'My Goals', icon: <TargetIcon /> },
@@ -160,11 +181,13 @@
             ];
             return ( 
                 <div className="animate-fade-in space-y-6">
-                    <div className="flex justify-end p-2">
-                        <button onClick={() => onNavigate('settings')} className="text-gray-500 hover:text-teal-600 p-1 rounded-full transition-colors">
-                            <SettingsIcon />
-                        </button>
+                    {/* The Settings Cog is now managed entirely by the App Header */}
+                    
+                    {/* NEW: Display Random Fact */}
+                    <div className="text-center p-3 bg-yellow-50 rounded-xl shadow-sm border border-yellow-200">
+                        <p className="text-sm font-medium text-yellow-800 italic">Recovery Insight: {randomFact}</p>
                     </div>
+
                     <SobrietyTracker startDate={sobrietyStartDate} />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {menuItems.map(item => ( 
@@ -648,7 +671,7 @@
                               questions: [
                                 "11. List 5 things you genuinely like about yourself.",
                                 "12. What role did sexual conduct or extreme self-neglect play in your past harms?",
-                                "13. If you could undo one wrong, which would it be, and why?",
+                                "13. If you could undo one wrong, which would be, and why?",
                                 "14. What truth about yourself is the hardest to accept?",
                                 "15. How does this inventory make Step 5 seem necessary?"
                               ]
@@ -909,39 +932,40 @@
         const WorkbookQuestion = ({ questionText, questionKey }) => {
             const [response, setResponse] = useState('');
             const [saveStatus, setSaveStatus] = useState('');
-            const debounceTimeout = useRef(null);
+            const isInitialLoad = useRef(true);
 
-            // Load specific question response
+            // 1. Load Data Effect (Runs only when questionKey changes, i.e., when loading a new Step/Topic)
             useEffect(() => {
                 const data = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
                 setResponse(data[questionKey] || '');
-                setSaveStatus('Initial Load');
+                isInitialLoad.current = true;
             }, [questionKey]);
 
-            // Save data with debounce
-            const saveData = useCallback((newText) => {
-                try {
-                    const data = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
-                    const updatedData = { ...data, [questionKey]: newText };
-                    LocalDataStore.save(LocalDataStore.KEYS.WORKBOOK, updatedData);
-                    setSaveStatus('Saved');
-                } catch (error) {
-                    console.error("Error saving workbook response:", error);
-                    setSaveStatus('Error');
-                }
-            }, [questionKey]);
-
+            // 2. Debounce Save Effect (Runs whenever response changes after initial load)
             useEffect(() => {
-                if (saveStatus !== 'Initial Load') {
-                    setSaveStatus('Saving...');
-                    if (debounceTimeout.current) { clearTimeout(debounceTimeout.current); }
-                    debounceTimeout.current = setTimeout(() => { saveData(response); }, 1500);
-                } else {
-                    if (response.length > 0) setSaveStatus('Saved');
-                    else setSaveStatus('');
+                // Skips saving on initial load, only runs when user types
+                if (isInitialLoad.current) {
+                    isInitialLoad.current = false;
+                    return;
                 }
-                return () => { if (debounceTimeout.current) { clearTimeout(debounceTimeout.current); } };
-            }, [response, saveData]);
+
+                setSaveStatus('Saving...');
+                
+                const delayDebounceFn = setTimeout(() => {
+                    try {
+                        const data = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
+                        const updatedData = { ...data, [questionKey]: response };
+                        LocalDataStore.save(LocalDataStore.KEYS.WORKBOOK, updatedData);
+                        setSaveStatus('Saved');
+                    } catch (error) {
+                        console.error("Error saving workbook response:", error);
+                        setSaveStatus('Error');
+                    }
+                }, 1500);
+
+                return () => clearTimeout(delayDebounceFn);
+            }, [response, questionKey]);
+
 
             return (
                 <div className="mb-4 pb-2">
@@ -1224,26 +1248,20 @@
                 <div className="bg-gray-100 h-screen w-full flex flex-col font-sans text-gray-800 p-2 sm:p-4">
                     <div className="flex-shrink-0 w-full max-w-2xl mx-auto">
                         <header className="flex items-center justify-between p-4">
-                            {/* Left Side Button (Back) */}
+                            {/* 1. Left Side: Back Button or Spacer */}
                             {activeView !== 'dashboard' && activeView !== 'settings' && sobrietyStartDate ? (
                                 <button onClick={() => setActiveView('dashboard')} className="text-teal-600 hover:text-teal-800 p-2 -ml-2"><ArrowLeftIcon /></button>
                             ) : <div className="w-10"></div>}
                             
                             <h1 className="text-xl font-bold text-gray-700">{headerTitle}</h1>
                             
-                            {/* Right Side Button (Settings - Only on Dashboard) */}
+                            {/* 2. Right Side: Settings Cog or Spacer */}
                             {activeView === 'dashboard' && sobrietyStartDate ? (
                                 <button onClick={() => setActiveView('settings')} className="text-gray-500 hover:text-teal-600 p-1">
                                     <SettingsIcon />
                                 </button>
                             ) : <div className="w-10"></div>}
                             
-                            {/* Back button logic for Settings page */}
-                            {activeView === 'settings' && <div className="w-10"></div>} 
-
-                            {/* Ensure consistent spacing when no button is present */}
-                            {activeView !== 'dashboard' && activeView !== 'settings' && !sobrietyStartDate && <div className="w-10"></div>}
-
                         </header>
                     </div>
                     <main className="flex-grow w-full max-w-2xl mx-auto overflow-y-auto pb-4">
