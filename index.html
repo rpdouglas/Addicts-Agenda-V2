@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Addict's Agenda</title>
-    <!-- PWA Manifest Link -->
-    <link rel="manifest" href="./manifest.json">
     <!-- Load React, ReactDOM, and Babel (to process JSX/modern JS) via CDN -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -35,25 +33,6 @@
             font-weight: 500;
         }
     </style>
-    
-    <!-- PWA Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // CRITICAL FIX: Ensure the Service Worker path is absolute by getting the current directory
-                // This resolves issues when hosting on GitHub Pages subdirectories.
-                const path = window.location.pathname.endsWith('/') ? './service-worker.js' : './service-worker.js';
-
-                navigator.serviceWorker.register(path, { scope: '.' })
-                    .then(registration => {
-                        console.log('Service Worker registered successfully:', registration);
-                    })
-                    .catch(error => {
-                        console.log('Service Worker registration failed:', error);
-                    });
-            });
-        }
-    </script>
 </head>
 <body>
     <div id="root"></div>
@@ -61,6 +40,18 @@
     <!-- Your JSX code must be inside a script tag with type="text/babel" -->
     <script type="text/babel">
         const { useState, useEffect, useCallback, useMemo, useRef } = React;
+
+        // --- APPLICATION VERSIONING ---
+        // NOTE: These versions must be manually incremented whenever logic for that specific component changes.
+        const APP_VERSIONS = {
+            DASHBOARD: '1.0.0',
+            JOURNAL: '1.3.0', // Updated for template and edit features
+            GOALS: '1.0.0',
+            COPING: '1.1.0',
+            WORKBOOK: '1.4.0', // Updated for collapsible sections and individual questions
+            LITERATURE: '1.1.0',
+            RESOURCES: '1.0.0',
+        };
 
         // --- Literature Data (Truncated for brevity, full content is in your source) ---
         const literatureData = {
@@ -212,4 +203,13 @@
 
                 // Persistence handler
                 const saveItemsToLocal = useCallback((updatedItems) => {
-                    const sortAndSet =
+                    const sortAndSet = updatedItems.sort((a, b) => (b.timestamp.getTime()) - (a.timestamp.getTime()));
+                    setItems(sortAndSet);
+                    const serializableItems = sortAndSet.map(item => ({
+                        ...item,
+                        timestamp: item.timestamp.toISOString()
+                    }));
+                    LocalDataStore.save(storageKey, serializableItems);
+                }, [storageKey]);
+
+                // Load data
