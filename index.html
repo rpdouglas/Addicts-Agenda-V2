@@ -4,28 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Addict's Agenda</title>
-    <!-- Load React and Babel via CDN to run JSX directly -->
+    <!-- Load React, ReactDOM, and Babel (to process JSX/modern JS) via CDN -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- IMPORTANT: Babel must load before your JSX script -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- Load Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Optional custom styles for smoother rendering */
+        /* Define custom font and ensure full-screen layout */
         body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        #root { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        #root { display: flex; justify-content: center; min-height: 100vh; width: 100%; }
         /* Preserve line breaks for journal/workbook text */
         .whitespace-pre-wrap { white-space: pre-wrap; }
     </style>
 </head>
 <body>
-    <div id="root" class="w-full"></div>
+    <div id="root"></div>
 
+    <!-- Your JSX code must be inside a script tag with type="text/babel" -->
     <script type="text/babel">
-        // Paste the entire contents of your App.jsx below this line.
+        const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
         // --- Literature Data ---
-        // (Data remains the same but is now inside the <script type="text/babel"> tag)
         const literatureData = {
             aa_big_book: {
                 title: "The Big Book (Alcoholics Anonymous)",
@@ -46,7 +47,7 @@
             }
         };
 
-        // --- SVG Icons (Simplified for HTML compatibility) ---
+        // --- SVG Icons ---
         const BookOpenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
         const TargetIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
         const LifeBuoyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"></line><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"></line><line x1="9.17" y1="14.83" x2="4.93" y2="19.07"></line></svg>;
@@ -61,7 +62,7 @@
         const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>;
 
 
-        // --- LOCAL STORAGE UTILITIES (Unchanged) ---
+        // --- LOCAL STORAGE UTILITIES ---
         const LocalDataStore = {
             KEYS: { SOBRIETY: 'recovery_sobriety_date', JOURNAL: 'recovery_journal_entries', GOALS: 'recovery_goals', WORKBOOK: 'recovery_workbook_responses' },
             load: (key) => {
@@ -85,7 +86,7 @@
 
         // --- HOOK: useAuth (Simplified) ---
         const useAuth = () => {
-            const user = React.useMemo(() => ({ uid: 'local_user_id' }), []);
+            const user = useMemo(() => ({ uid: 'local_user_id' }), []);
             return { user, isAuthLoading: false };
         };
 
@@ -94,7 +95,7 @@
 
         // --- COMPONENT: SobrietyDataSetup ---
         const SobrietyDataSetup = ({ onDateSet }) => {
-            const [date, setDate] = React.useState(new Date().toISOString().split('T')[0]);
+            const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
             const handleSave = () => {
                 const newStartDate = new Date(date);
                 LocalDataStore.save(LocalDataStore.KEYS.SOBRIETY, newStartDate.toISOString());
@@ -105,12 +106,13 @@
 
         // --- COMPONENT: SobrietyTracker ---
         const SobrietyTracker = ({ startDate }) => {
-            const calculateTimeSober = React.useCallback(() => {
+            // FIXED: Removed dependency on useCallback's return value to prevent re-creation issues
+            const calculateTimeSober = () => {
                 const diff = new Date().getTime() - new Date(startDate).getTime();
                 return { days: Math.floor(diff / 86400000), hours: Math.floor((diff % 86400000) / 3600000), minutes: Math.floor((diff % 3600000) / 60000), seconds: Math.floor((diff % 60000) / 1000) };
-            }, [startDate]);
-            const [timeSober, setTimeSober] = React.useState(calculateTimeSober());
-            React.useEffect(() => { const timer = setInterval(() => setTimeSober(calculateTimeSober()), 1000); return () => clearInterval(timer); }, [calculateTimeSober]);
+            };
+            const [timeSober, setTimeSober] = useState(calculateTimeSober());
+            useEffect(() => { const timer = setInterval(() => setTimeSober(calculateTimeSober()), 1000); return () => clearInterval(timer); }, [startDate]);
             const timeUnits = [ { label: 'Days', value: timeSober.days }, { label: 'Hours', value: timeSober.hours }, { label: 'Minutes', value: timeSober.minutes }, { label: 'Seconds', value: timeSober.seconds } ];
             return ( <div className="bg-white p-6 rounded-xl shadow-lg text-center"><h3 className="text-lg font-semibold text-gray-500 mb-4">You are on your path</h3><div className="grid grid-cols-4 gap-2 sm:gap-4">{timeUnits.map(unit => ( <div key={unit.label} className="flex flex-col items-center bg-gray-100 p-2 sm:p-3 rounded-lg"><span className="text-3xl sm:text-4xl font-bold text-teal-600">{String(unit.value).padStart(2, '0')}</span><span className="text-xs sm:text-sm text-gray-600 uppercase tracking-wider">{unit.label}</span></div> ))}</div></div> );
         };
@@ -129,9 +131,8 @@
         };
 
         // --- COMPONENT: GeminiJournalHelper ---
-        // (Functionality relies on external API call and remains largely the same)
         const GeminiJournalHelper = ({ onInsertText, onClose }) => {
-            const [prompt, setPrompt] = React.useState(''); const [isLoading, setIsLoading] = React.useState(false); const [result, setResult] = React.useState(''); const [error, setError] = React.useState('');
+            const [prompt, setPrompt] = useState(''); const [isLoading, setIsLoading] = useState(false); const [result, setResult] = useState(''); const [error, setError] = useState('');
             const handleGenerate = async () => {
                 if (!prompt.trim()) { setError('Please enter a topic or feeling.'); return; }
                 setIsLoading(true); setResult(''); setError('');
@@ -153,18 +154,30 @@
 
             return ({ journalTemplate, setJournalTemplate }) => {
                 const isJournal = config.collectionName === 'journal';
-                const [items, setItems] = React.useState([]);
-                const [newItem, setNewItem] = React.useState('');
-                const [editingItem, setEditingItem] = React.useState(null);
-                const [editedText, setEditedText] = React.useState('');
-                const [isLoading, setIsLoading] = React.useState(true);
-                const [showGeminiHelper, setShowGeminiHelper] = React.useState(false);
+                const [items, setItems] = useState([]);
+                const [newItem, setNewItem] = useState('');
+                const [editingItem, setEditingItem] = useState(null);
+                const [editedText, setEditedText] = useState('');
+                const [isLoading, setIsLoading] = useState(true);
+                const [showGeminiHelper, setShowGeminiHelper] = useState(false);
+
+                // Persistence handler
+                const saveItemsToLocal = useCallback((updatedItems) => {
+                    const sortAndSet = updatedItems.sort((a, b) => (b.timestamp.getTime()) - (a.timestamp.getTime()));
+                    setItems(sortAndSet);
+                    const serializableItems = sortAndSet.map(item => ({
+                        ...item,
+                        timestamp: item.timestamp.toISOString()
+                    }));
+                    LocalDataStore.save(storageKey, serializableItems);
+                }, [storageKey]);
 
                 // Load data on initial render
-                React.useEffect(() => {
+                useEffect(() => {
                     const loadedItems = LocalDataStore.load(storageKey);
                     const formattedItems = loadedItems.map(item => ({
                         ...item,
+                        // Ensure timestamp is a Date object for sorting/manipulation
                         timestamp: item.timestamp ? new Date(item.timestamp) : new Date(0)
                     })).sort((a, b) => (b.timestamp.getTime()) - (a.timestamp.getTime()));
 
@@ -173,23 +186,12 @@
                 }, [storageKey]);
                 
                 // Handle template injection from Coping Cards
-                React.useEffect(() => {
+                useEffect(() => {
                     if (journalTemplate && setJournalTemplate) {
                         setNewItem(journalTemplate);
                         setJournalTemplate('');
                     }
                 }, [journalTemplate, setJournalTemplate]);
-
-                // Persistence handler
-                const saveItemsToLocal = (updatedItems) => {
-                    const sortAndSet = updatedItems.sort((a, b) => (b.timestamp.getTime()) - (a.timestamp.getTime()));
-                    setItems(sortAndSet);
-                    const serializableItems = sortAndSet.map(item => ({
-                        ...item,
-                        timestamp: item.timestamp.toISOString()
-                    }));
-                    LocalDataStore.save(storageKey, serializableItems);
-                };
 
                 // CRUD Handlers
                 const handleAddItem = (e) => {
@@ -238,4 +240,305 @@
                 };
 
                 const NewEntryForm = () => (
-                    <form onSubmit={handleAddItem} className="
+                    <form onSubmit={handleAddItem} className="mb-2 space-y-2">
+                        {/* Input/Textarea field */}
+                        {isJournal ? (
+                            <textarea
+                                value={newItem}
+                                onChange={(e) => setNewItem(e.target.value)}
+                                placeholder={config.placeholder}
+                                className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500 resize-none"
+                                rows="10" 
+                            />
+                        ) : (
+                            <input
+                                type="text"
+                                value={newItem}
+                                onChange={(e) => setNewItem(e.target.value)}
+                                placeholder={config.placeholder}
+                                className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500"
+                            />
+                        )}
+
+                        {/* Submit button(s) */}
+                        <div className={`flex ${isJournal ? 'justify-end' : 'gap-2'}`}>
+                            {isJournal ? (
+                                <button type="submit" className="w-full bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700">Add Journal Entry</button>
+                            ) : (
+                                <button type="submit" className="bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700">Add</button>
+                            )}
+                        </div>
+                    </form>
+                );
+
+
+                return ( 
+                    <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col"> 
+                        <h2 className="text-2xl font-bold text-gray-800 mb-4">{config.title}</h2> 
+                        <p className="text-gray-600 mb-6">{config.prompt}</p> 
+                        
+                        <NewEntryForm />
+
+                        {config.useGemini && isJournal && (
+                            <> 
+                                <button onClick={() => setShowGeminiHelper(!showGeminiHelper)} className="flex items-center justify-center gap-2 text-sm text-teal-600 hover:text-teal-800 font-semibold mb-4">
+                                    <SparklesIcon/> {showGeminiHelper ? 'Close AI Helper' : 'Get Idea with AI'}
+                                </button> 
+                                {showGeminiHelper && <GeminiJournalHelper onInsertText={(text) => setNewItem(text)} onClose={() => setShowGeminiHelper(false)} />} 
+                            </>
+                        )} 
+                        
+                        <div className="flex-grow overflow-y-auto pr-2 -mr-2 mt-4"> 
+                            {isLoading ? <Spinner /> : (items.length > 0 ? ( 
+                                <ul className="space-y-3"> 
+                                    {items.map(item => ( 
+                                        <li key={item.id} className="p-4 bg-gray-50 rounded-lg shadow-sm">
+                                            {editingItem?.id === item.id ? (
+                                                <form onSubmit={handleUpdateItem} className="space-y-2">
+                                                    <textarea
+                                                        value={editedText}
+                                                        onChange={(e) => setEditedText(e.target.value)}
+                                                        className="w-full p-2 border border-teal-500 rounded-lg resize-none"
+                                                        rows={isJournal ? 5 : 2}
+                                                    />
+                                                    <div className="flex justify-end gap-2">
+                                                        <button type="button" onClick={() => setEditingItem(null)} className="text-gray-500 hover:text-gray-700 text-sm font-semibold">Cancel</button>
+                                                        <button type="submit" className="bg-teal-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-teal-600 font-semibold">Save Changes</button>
+                                                    </div>
+                                                </form>
+                                            ) : (
+                                                <div className="flex flex-col">
+                                                    <div className="flex items-start justify-between w-full">
+                                                        {config.hasCompleted && <input type="checkbox" checked={item.completed} onChange={() => handleToggleCompleted(item)} className="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mr-4 flex-shrink-0 mt-1"/>}
+                                                        <div className="flex-grow">
+                                                            <p className={`text-gray-800 whitespace-pre-wrap ${item.completed ? 'line-through text-gray-400' : ''}`}>{item.text}</p>
+                                                            <p className="text-xs text-gray-400 mt-1">{item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Just now'}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-end mt-2 space-x-2">
+                                                        <button onClick={() => handleEdit(item)} className="text-gray-500 hover:text-blue-600 text-xs font-semibold flex items-center gap-1">
+                                                            <EditIcon /> Edit
+                                                        </button>
+                                                        <button onClick={() => handleDeleteItem(item.id)} className="text-gray-500 hover:text-red-500 text-xs font-semibold flex items-center gap-1">
+                                                            <TrashIcon /> Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </li> 
+                                    ))} 
+                                </ul> 
+                            ) : ( <div className="text-center py-10"><p className="text-gray-500">{config.emptyState}</p></div> ))} 
+                        </div> 
+                    </div> 
+                );
+            };
+        };
+        const DailyJournal = createListModule({ collectionName: 'journal', title: 'Daily Journal', prompt: 'How are you feeling? You can write about your day, feelings, or things you are grateful for.', placeholder: 'Write your entry...', emptyState: 'No journal entries yet.', useGemini: true });
+        const Goals = createListModule({ collectionName: 'goals', title: 'My Goals', prompt: 'Set small, achievable goals for your recovery.', placeholder: 'e.g., Attend a meeting', emptyState: 'No goals set yet.', hasCompleted: true });
+
+        // --- COMPONENT: Resources (Unchanged) ---
+        const Resources = () => ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"><h2 className="text-2xl font-bold text-gray-800 mb-2">S.O.S. Resources</h2><p className="text-gray-600 mb-6">You are not alone. Help is available.</p><ul className="space-y-4"> {[{ name: "SAMHSA National Helpline", number: "1-800-662-4357", description: "Confidential free help to find substance use treatment and information." }, { name: "National Suicide Prevention Lifeline", number: "988", description: "24/7, free and confidential support for people in distress." }, { name: "Alcoholics Anonymous (A.A.)", link: "https://www.aa.org", description: "Find local and online meetings and resources." }, { name: "Narcotics Anonymous (N.A.)", link: "https://www.na.org", description: "Find local and online meetings and resources." }].map(item => ( <li key={item.name} className="p-4 bg-gray-50 rounded-lg shadow-sm"><h3 className="font-bold text-teal-700">{item.name}</h3><p className="text-gray-600 my-1">{item.description}</p>{item.number && <a href={`tel:${item.number}`} className="text-blue-600 font-semibold hover:underline">{item.number}</a>}{item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold hover:underline">Visit Website</a>}</li> ))}</ul></div> );
+
+        // --- COMPONENT: Coping Cards (Unchanged) ---
+        const CopingCards = ({ onJournal }) => {
+            const copingStrategies = useMemo(() => [ { title: "Deep Breathing", description: "Inhale for 4s, hold for 7s, exhale for 8s. Repeat 3-5 times." }, { title: "5-4-3-2-1 Method", description: "Name: 5 things you see, 4 you feel, 3 you hear, 2 you smell, 1 you taste." }, { title: "Go for a Walk", description: "A 10-15 minute walk can change your scenery and mindset." }, { title: "Play the Tape Through", description: "Think about the full consequences of giving in to a craving." }, { title: "Call a Friend", description: "Talk about what you're feeling with your support network." }, { title: "Delay and Distract", description: "Wait 15 minutes. Do something to distract yourself in that time." }, ], []);
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const card = copingStrategies[currentIndex];
+            return ( <div className="flex flex-col items-center justify-center h-full p-4 animate-fade-in"> <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center flex-grow flex flex-col justify-center"> <h2 className="text-2xl font-bold text-teal-600 mb-4">{card.title}</h2> <p className="text-gray-700 text-lg">{card.description}</p> </div> <div className="flex flex-col sm:flex-row gap-4 mt-6"> <button onClick={() => onJournal(card)} className="bg-white text-teal-600 border border-teal-600 font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-50 transition-colors">Journal on This</button> <button onClick={() => setCurrentIndex((p) => (p + 1) % copingStrategies.length)} className="bg-teal-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-700 transform hover:scale-105">Next Card</button> </div> </div> );
+        };
+
+        // --- COMPONENT: Recovery Literature (Unchanged) ---
+        const RecoveryLiterature = () => {
+            const [selectedBook, setSelectedBook] = useState(null); const [selectedChapter, setSelectedChapter] = useState(null);
+            const formatContent = (content) => content.split('\n\n').map((paragraph, index) => <p key={index} className="mb-4">{paragraph.trim()}</p>);
+            if (selectedChapter) { return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col"> <button onClick={() => setSelectedChapter(null)} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold flex-shrink-0"><ArrowLeftIcon /><span className="ml-2">Back to Chapters</span></button> <h2 className="text-2xl font-bold text-gray-800 mb-4 flex-shrink-0">{selectedChapter.title}</h2> <div className="prose-lg text-gray-700 overflow-y-auto flex-grow pr-2">{formatContent(selectedChapter.content)}</div> </div> ); }
+            if (selectedBook) { return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"> <button onClick={() => setSelectedBook(null)} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold"><ArrowLeftIcon /><span className="ml-2">Back to Library</span></button> <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold text-gray-800">{selectedBook.title}</h2><a href={selectedBook.pdfLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600"><DownloadIcon />PDF</a></div> <ul className="space-y-3">{selectedBook.chapters.map((chapter, index) => ( <li key={index}><button onClick={() => setSelectedChapter(chapter)} className="w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm"><h3 className="font-semibold text-gray-800">{chapter.title}</h3></button></li> ))}</ul> </div> ); }
+            return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"><h2 className="text-2xl font-bold text-gray-800 mb-2">Recovery Literature</h2><p className="text-gray-600 mb-6">Read or download foundational recovery texts.</p><ul className="space-y-4">{Object.keys(literatureData).map(key => { const book = literatureData[key]; return ( <li key={key} className="p-4 bg-gray-50 rounded-lg shadow-sm"><div className="flex justify-between items-start"><div><h3 className="font-semibold text-gray-800 text-lg">{book.title}</h3></div><a href={book.pdfLink} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 ml-4 flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 text-sm"><DownloadIcon />PDF</a></div><button onClick={() => setSelectedBook(book)} className="mt-4 w-full bg-teal-50 text-teal-700 font-semibold py-2 px-4 rounded-lg hover:bg-teal-100">Read in App</button></li> )})}</ul></div> );
+        };
+
+        // --- COMPONENT: Recovery Workbook (Updated for Local Storage) ---
+        const workbookData = { generalRecovery: { title: "General Recovery Exercises", description: "Core exercises for your recovery.", topics: [ { id: 'understanding-addiction', title: 'Understanding My Addiction', prompt: 'Reflect on when your addiction started. What were the circumstances? How has it impacted your life, relationships, and health? Write openly about your journey with the substance or behavior.' }, { id: 'identifying-triggers', title: 'Identifying Triggers', prompt: 'What situations, feelings, people, or places make you want to use? List as many as you can. For each trigger, think about why it affects you and how you have reacted in the past.' }, { id: 'coping-strategies', title: 'Developing Coping Strategies', prompt: 'For each trigger you identified, brainstorm a healthy coping strategy. What can you do instead of turning to your addiction? Examples: call a sponsor, go for a walk, practice deep breathing, listen to music.' }, { id: 'building-support', title: 'Building a Support Network', prompt: 'Who are the supportive, trustworthy people in your life? List their names and how they can help. Who do you need to distance yourself from? How will you build new, healthy relationships?' }, { id: 'vision-for-future', title: 'My Vision for a Sober Future', prompt: 'Describe the life you want to live in recovery. What are your goals for your career, family, health, and personal growth? Be specific and imagine how good it will feel to achieve these things.' }, { id: 'relapse-prevention', title: 'Relapse Prevention Plan', prompt: 'Acknowledge that recovery is a process. What are your personal warning signs that you might be heading for a relapse? Create a step-by-step plan of action for what you will do if you feel an urge or craving.' } ] }, twelveSteps: { title: "12-Step Workbook", description: "A guide to working the 12 Steps.", topics: [ { id: 'step-1', title: 'Step 1: Honesty', prompt: 'We admitted we were powerless over our addiction, that our lives had become unmanageable. Reflect on this powerlessness. In what ways has your life been unmanageable?' }, { id: 'step-2', title: 'Step 2: Hope', prompt: 'Came to believe that a Power greater than ourselves could restore us to sanity. What does a "Power greater than yourself" mean to you? It can be a spiritual entity, the recovery group, or any force for good. How can this Power help?' }, { id: 'step-3', title: 'Step 3: Trust', prompt: 'Made a decision to turn our will and our lives over to the care of God as we understood Him. What does it mean for you to "turn over" your will? Write about letting go of control.' }, { id: 'step-4', title: 'Step 4: Truth', prompt: 'Made a searching and fearless moral inventory of ourselves. List your resentments, fears, and harms done to others. This is for your eyes only, so be brutally honest.' }, { id: 'step-5', title: 'Step 5: Integrity', prompt: 'Admitted to God, to ourselves, and to another human being the exact nature of our wrongs. Share your Step 4 inventory with a trusted person (sponsor, therapist). How did it feel to share this?' }, { id: 'step-6', title: 'Step 6: Willingness', prompt: 'Were entirely ready to have God remove all these defects of character. What are your primary character defects (e.g., pride, greed, dishonesty)? Are you truly willing to let them go?' }, { id: 'step-7', title: 'Step 7: Humility', prompt: 'Humbly asked Him to remove our shortcomings. Write a prayer or reflection asking your Higher Power to help you with the defects you identified in Step 6.' }, { id: 'step-8', title: 'Step 8: Responsibility', prompt: 'Made a list of all persons we had harmed, and became willing to make amends to them all. List everyone you have harmed through your addiction, directly or indirectly.' }, { id: 'step-9', title: 'Step 9: Amends', prompt: 'Made direct amends to such people wherever possible, except when to do so would injure them or others. For each person on your Step 8 list, how will you make amends? Focus on actions, not just words.' }, { id: 'step-10', title: 'Step 10: Awareness', prompt: 'Continued to take personal inventory and when we were wrong promptly admitted it. How will you incorporate a daily self-check into your life to stay accountable?' }, { id: 'step-11', title: 'Step 11: Connection', prompt: 'Sought through prayer and meditation to improve our conscious contact with God as we understood Him, praying only for knowledge of His will for us and the power to carry that out. What practices (e.g., meditation, prayer, time in nature) will you use to connect with your Higher Power?' }, { id: 'step-12', title: 'Step 12: Service', prompt: 'Having had a spiritual awakening as the result of these steps, we tried to carry this message to alcoholics, and to practice these principles in all our affairs. How can you help another person who is struggling? How will you apply these principles in your daily life?' } ] } };
+
+        const WorkbookTopic = ({ topic, onBack }) => {
+            const [response, setResponse] = useState('');
+            const [isLoading, setIsLoading] = useState(true);
+            const [saveStatus, setSaveStatus] = useState('Saved');
+            const debounceTimeout = useRef(null);
+
+            // Load initial data from localStorage
+            useEffect(() => {
+                const data = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
+                setResponse(data[topic.id] || '');
+                setIsLoading(false);
+            }, [topic.id]);
+
+            // Save data with debounce
+            const saveData = useCallback((newText) => {
+                try {
+                    const data = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
+                    if (data[topic.id] !== newText) {
+                        const updatedData = { ...data, [topic.id]: newText };
+                        LocalDataStore.save(LocalDataStore.KEYS.WORKBOOK, updatedData);
+                    }
+                    setSaveStatus('Saved');
+                } catch (error) {
+                    console.error("Error saving workbook response:", error);
+                    setSaveStatus('Error');
+                }
+            }, [topic.id]);
+
+            useEffect(() => {
+                if (!isLoading) {
+                    setSaveStatus('Saving...');
+                    if (debounceTimeout.current) { clearTimeout(debounceTimeout.current); }
+                    debounceTimeout.current = setTimeout(() => { saveData(response); }, 1500);
+                }
+                return () => { if (debounceTimeout.current) { clearTimeout(debounceTimeout.current); } };
+            }, [response, isLoading, saveData]);
+
+            if (isLoading) { return <div className="h-full flex items-center justify-center"><Spinner /></div>; }
+            return (
+                <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col">
+                    <button onClick={onBack} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold"><ArrowLeftIcon /><span className="ml-2">Back to Topics</span></button>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">{topic.title}</h3>
+                    <p className="text-gray-600 mb-6 flex-shrink-0">{topic.prompt}</p>
+                    <div className="flex-grow flex flex-col">
+                        <textarea value={response} onChange={(e) => setResponse(e.target.value)} placeholder="Your thoughts and reflections..." className="w-full h-full flex-grow p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500 resize-none" />
+                        <p className="text-right text-sm text-gray-500 mt-2 h-4">{saveStatus}</p>
+                    </div>
+                </div>
+            );
+        };
+        const WorkbookCategory = ({ category, onSelectTopic, onBack, completedTopicIds }) => (
+            <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in">
+                <button onClick={onBack} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold"><ArrowLeftIcon /><span className="ml-2">Back to Workbook Sections</span></button>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">{category.title}</h2>
+                <p className="text-gray-600 mb-6">{category.description}</p>
+                <ul className="space-y-3">
+                    {category.topics.map(topic => (
+                        <li key={topic.id}>
+                            <button onClick={() => onSelectTopic(topic)} className="w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 flex items-center justify-between">
+                                <h3 className="font-semibold text-gray-800">{topic.title}</h3>
+                                {completedTopicIds.includes(topic.id) && <CheckCircleIcon className="text-green-500"/>}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
+
+        const RecoveryWorkbook = () => {
+            const [activeCategory, setActiveCategory] = useState(null); 
+            const [selectedTopic, setSelectedTopic] = useState(null); 
+            const [workbookResponses, setWorkbookResponses] = useState({});
+
+            // Load and listen for changes in workbook responses
+            useEffect(() => {
+                const loadedData = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
+                setWorkbookResponses(loadedData);
+                
+                const handleStorageChange = (e) => {
+                    if (e.key === LocalDataStore.KEYS.WORKBOOK) {
+                        setWorkbookResponses(LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {});
+                    }
+                };
+                window.addEventListener('storage', handleStorageChange);
+                return () => window.removeEventListener('storage', handleStorageChange);
+            }, []);
+
+            const completedTopicIds = useMemo(() => {
+                return Object.keys(workbookResponses).filter(id => workbookResponses[id]?.trim());
+            }, [workbookResponses]);
+
+            const calculateCompletion = useCallback((key) => {
+                const topics = workbookData[key].topics;
+                const completed = topics.filter(t => completedTopicIds.includes(t.id)).length;
+                const total = topics.length;
+                return { completed, total, percentage: total > 0 ? Math.round((completed / total) * 100) : 0 };
+            }, [completedTopicIds]);
+
+            const overallCompletion = useMemo(() => {
+                const allTopics = Object.values(workbookData).flatMap(c => c.topics);
+                const completed = allTopics.filter(t => completedTopicIds.includes(t.id)).length;
+                const total = allTopics.length;
+                return { completed, total, percentage: total > 0 ? Math.round((completed / total) * 100) : 0 };
+            }, [completedTopicIds]);
+            
+            if (selectedTopic) return <WorkbookTopic topic={selectedTopic} onBack={() => setSelectedTopic(null)} />;
+            if (activeCategory) return <WorkbookCategory category={activeCategory} onSelectTopic={setSelectedTopic} onBack={() => setActiveCategory(null)} completedTopicIds={completedTopicIds} />;
+            
+            return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"> <h2 className="text-2xl font-bold text-gray-800 mb-2">Recovery Workbook</h2> <p className="text-gray-600 mb-6">Track your progress.</p> <div className="mb-6"> <div className="flex justify-between items-center mb-1"> <span className="text-sm font-semibold text-gray-600">Overall Progress</span> <span className="text-sm font-semibold text-teal-600">{overallCompletion.percentage}%</span> </div> <div className="w-full bg-gray-200 rounded-full h-2.5"><div className="bg-teal-500 h-2.5 rounded-full" style={{ width: `${overallCompletion.percentage}%` }}></div></div> </div> <ul className="space-y-4"> {Object.keys(workbookData).map(key => { const { completed, total, percentage } = calculateCompletion(key); return ( <li key={key}> <button onClick={() => setActiveCategory(workbookData[key])} className="w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm"> <h3 className="font-semibold text-gray-800 text-lg">{workbookData[key].title}</h3> <p className="text-gray-600 mt-1 text-sm">{workbookData[key].description}</p> <div className="mt-3"> <div className="flex justify-between items-center mb-1"> <span className="text-xs font-semibold text-gray-500">{completed} / {total} Completed</span> <span className="text-xs font-semibold text-teal-600">{percentage}%</span> </div> <div className="w-full bg-gray-200 rounded-full h-1.5"><div className="bg-teal-500 h-1.5 rounded-full" style={{ width: `${percentage}%` }}></div></div> </div> </button> </li> ); })} </ul> </div> );
+        };
+
+        // --- COMPONENT: App (Main Component) ---
+        const App = () => {
+            const { isAuthLoading } = useAuth();
+            const [activeView, setActiveView] = useState('dashboard');
+            const [sobrietyStartDate, setSobrietyStartDate] = useState(null);
+            const [isDataLoading, setIsDataLoading] = useState(true);
+            const [journalTemplate, setJournalTemplate] = useState('');
+
+            // Load sobriety date from localStorage on mount
+            useEffect(() => {
+                const storedDate = LocalDataStore.load(LocalDataStore.KEYS.SOBRIETY);
+                if (storedDate) {
+                    setSobrietyStartDate(new Date(storedDate));
+                }
+                setIsDataLoading(false);
+            }, []);
+
+            const handleJournalFromCopingCard = (card) => {
+                const template = `Coping Card Reflection: "${card.title}"\n\n**Strategy:** ${card.description}\n\n**My Application Plan:** (How will I use this skill the next time I have a craving?)\n\n`;
+                setJournalTemplate(template);
+                setActiveView('journal');
+            };
+
+            const renderContent = () => {
+                if (isAuthLoading || isDataLoading) return <div className="h-full flex items-center justify-center"><Spinner /></div>;
+                
+                if (!sobrietyStartDate) return <SobrietyDataSetup onDateSet={setSobrietyStartDate} />;
+                
+                if (sobrietyStartDate) {
+                    switch (activeView) {
+                        case 'dashboard': return <Dashboard onNavigate={setActiveView} sobrietyStartDate={sobrietyStartDate} />;
+                        case 'journal': return <DailyJournal journalTemplate={journalTemplate} setJournalTemplate={setJournalTemplate} />;
+                        case 'goals': return <Goals />;
+                        case 'coping': return <CopingCards onJournal={handleJournalFromCopingCard} />;
+                        case 'workbook': return <RecoveryWorkbook />;
+                        case 'literature': return <RecoveryLiterature />;
+                        case 'resources': return <Resources />;
+                        default: return <Dashboard onNavigate={setActiveView} sobrietyStartDate={sobrietyStartDate} />;
+                    }
+                }
+            };
+            
+            const headerTitle = useMemo(() => {
+                const titles = { dashboard: "The Addict's Agenda", coping: "Coping Cards", literature: "Recovery Literature", journal: "Daily Journal", goals: "My Goals", workbook: "Recovery Workbook", resources: "S.O.S. Resources" };
+                return titles[activeView] || "Recovery";
+            }, [activeView]);
+
+            return (
+                <div className="bg-gray-100 h-screen w-full flex flex-col font-sans text-gray-800 p-2 sm:p-4">
+                    <div className="flex-shrink-0 w-full max-w-2xl mx-auto">
+                        <header className="flex items-center justify-between p-4">
+                            {activeView !== 'dashboard' && sobrietyStartDate ? (<button onClick={() => setActiveView('dashboard')} className="text-teal-600 hover:text-teal-800 p-2 -ml-2"><ArrowLeftIcon /></button>) : <div className="w-10"></div>}
+                            <h1 className="text-xl font-bold text-gray-700">{headerTitle}</h1>
+                            <div className="w-10"></div>
+                        </header>
+                    </div>
+                    <main className="flex-grow w-full max-w-2xl mx-auto overflow-y-auto pb-4">
+                        {renderContent()}
+                    </main>
+                </div>
+            );
+        };
+
+        // Initialize and render the App component
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>
+
