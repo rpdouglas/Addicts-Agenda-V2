@@ -33,1108 +33,1590 @@
 <body>
     <div id="root"></div>
 
-    <!-- Load React and ReactDOM from CDN -->
+    <!-- CRITICAL FIX: Load React/Babel AFTER the DOM (and the #root element) has been created. -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- CRITICAL: Load main application logic as a native ES Module (type="module") -->
-    <!-- The main module will import data.js and icons.js -->
-    <script type="module" src="./app.js"></script> 
-</body>
-</html>
+    <!-- Your JSX code must be inside a script tag with type="text/babel" -->
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
-} from './data.js';
-
-import { 
-    BookOpenIcon, TargetIcon, LifeBuoyIcon, ClipboardListIcon, ShieldIcon, 
-    ArrowLeftIcon, TrashIcon, SparklesIcon, CheckCircleIcon, LibraryIcon, 
-    DownloadIcon, EditIcon, ChevronDown, ChevronUp, CheckIcon, SettingsIcon, 
-    MapPinIcon, PhoneIcon, XIcon, FileTextIcon 
-} from './icons.js';
-
-const { useState, useEffect, useCallback, useMemo, useRef } = React;
-
-// Re-assigning journalTemplates to maintain structure clarity in this file
-const journalTemplates = exportedJournalTemplates;
-
-// Mapping the string icon names in copingStrategies back to the actual React components
-const iconMap = {
-    MapPinIcon: MapPinIcon,
-    PhoneIcon: PhoneIcon,
-    ShieldIcon: ShieldIcon,
-};
-const allCopingCards = copingStrategies.map(card => ({
-    ...card,
-    icon: iconMap[card.icon] || ShieldIcon // Default to ShieldIcon if not found
-}));
-
-
-// --- LOCAL STORAGE UTILITIES ---
-const LocalDataStore = {
-    KEYS: { 
-        SOBRIETY: 'recovery_sobriety_date', 
-        JOURNAL: 'recovery_journal_entries', 
-        GOALS: 'recovery_goals', 
-        WORKBOOK: 'recovery_workbook_responses', 
-        WELCOME_TIP: 'recovery_welcome_tip_dismissed'
-    },
-    load: (key) => {
-        try {
-            const serializedData = localStorage.getItem(key);
-            if (key === LocalDataStore.KEYS.SOBRIETY) {
-                return serializedData === null ? null : JSON.parse(serializedData);
-            }
-            if (key === LocalDataStore.KEYS.WELCOME_TIP) {
-                return serializedData === 'true';
-            }
-            return serializedData === null ? [] : JSON.parse(serializedData);
-        } catch (error) {
-            console.error(`Error loading data from localStorage for key ${key}:`, error);
-            return key === LocalDataStore.KEYS.SOBRIETY ? null : (key === LocalDataStore.KEYS.WELCOME_TIP ? false : []);
-        }
-    },
-    save: (key, data) => {
-        try {
-            const dataToStore = key === LocalDataStore.KEYS.SOBRIETY || key === LocalDataStore.KEYS.WELCOME_TIP
-                ? data : JSON.stringify(data);
-            localStorage.setItem(key, dataToStore);
-        } catch (error) {
-            console.error(`Error saving data to localStorage for key ${key}:`, error);
-        }
-    },
-    // Collects all relevant data for export
-    loadAll: () => {
-        const allData = {};
-        for (const key in LocalDataStore.KEYS) {
-            if (LocalDataStore.KEYS[key] !== LocalDataStore.KEYS.WELCOME_TIP) {
-                 const rawData = localStorage.getItem(LocalDataStore.KEYS[key]);
-                 if (rawData) {
-                     // Try to parse if it's not the raw sobriety date string
-                     try {
-                         allData[LocalDataStore.KEYS[key]] = JSON.parse(rawData);
-                     } catch {
-                         allData[LocalDataStore.KEYS[key]] = rawData;
-                     }
-                 }
-            }
-        }
-        return allData;
-    },
-    generateId: () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
-};
-
-// --- HOOK: useAuth (Simplified) ---
-const useAuth = () => {
-    const user = useMemo(() => ({ uid: 'local_user_id' }), []);
-    return { user, isAuthLoading: false };
-};
-
-// --- COMPONENT: Spinner ---
-const Spinner = ({ small = false }) => ( React.createElement("div", { className: `flex justify-center items-center ${small ? '' : 'h-full'}` }, React.createElement("div", { className: `animate-spin rounded-full border-t-2 border-b-2 border-teal-500 ${small ? 'h-6 w-6' : 'h-16 w-16'}` })));
-
-// --- COMPONENT: SobrietyDataSetup ---
-const SobrietyDataSetup = ({ onDateSet }) => {
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const handleSave = () => {
-        const newStartDate = new Date(date);
-        LocalDataStore.save(LocalDataStore.KEYS.SOBRIETY, newStartDate.toISOString());
-        // Set the welcome tip to be visible for new users
-        LocalDataStore.save(LocalDataStore.KEYS.WELCOME_TIP, 'false');
-        onDateSet(newStartDate);
-    };
-    return ( React.createElement("div", { className: "flex flex-col items-center justify-center h-full p-6 bg-gray-50 rounded-xl shadow-lg animate-fade-in" }, React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-2" }, "Welcome"), React.createElement("p", { className: "text-gray-600 mb-6 text-center" }, "Let's start your journey. Please select your sobriety start date."), React.createElement("input", { type: "date", value: date, onChange: (e) => setDate(e.target.value), className: "w-full max-w-xs p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500" }), React.createElement("button", { onClick: handleSave, className: "mt-6 bg-teal-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-700 transition-transform transform hover:scale-105" }, "Begin Journey")) );
-};
-
-// --- COMPONENT: SobrietyTracker ---
-const SobrietyTracker = ({ startDate }) => {
-    const calculateTimeSober = () => {
-        const diff = new Date().getTime() - new Date(startDate).getTime();
-        return { days: Math.floor(diff / 86400000), hours: Math.floor((diff % 86400000) / 3600000), minutes: Math.floor((diff % 3600000) / 60000), seconds: Math.floor((diff % 60000) / 1000) };
-    };
-    const [timeSober, setTimeSober] = useState(calculateTimeSober());
-    useEffect(() => { const timer = setInterval(() => setTimeSober(calculateTimeSober()), 1000); return () => clearInterval(timer); }, [startDate]);
-    const timeUnits = [ { label: 'Days', value: timeSober.days }, { label: 'Hours', value: timeSober.hours }, { label: 'Minutes', value: timeSober.minutes }, { label: 'Seconds', value: timeSober.seconds } ];
-    return ( React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg text-center" }, React.createElement("h3", { className: "text-lg font-semibold text-gray-500 mb-4" }, "You are on your path"), React.createElement("div", { className: "grid grid-cols-4 gap-2 sm:gap-4" }, timeUnits.map(unit => ( React.createElement("div", { key: unit.label, className: "flex flex-col items-center bg-gray-100 p-2 sm:p-3 rounded-lg" }, React.createElement("span", { className: "text-3xl sm:text-4xl font-bold text-teal-600" }, String(unit.value).padStart(2, '0')), React.createElement("span", { className: "text-xs sm:text-sm text-gray-600 uppercase tracking-wider" }, unit.label)))))) );
-};
-
-// --- COMPONENT: WelcomeTip (New Onboarding Component) ---
-const WelcomeTip = ({ onDismiss }) => {
-    return (
-        React.createElement("div", { className: "p-4 bg-blue-100 border border-blue-300 rounded-xl shadow-md flex justify-between items-start mb-6" },
-            React.createElement("div", { className: "flex-grow pr-4" },
-                React.createElement("p", { className: "font-bold text-blue-800 mb-1" }, "Welcome to Recovery"),
-                React.createElement("p", { className: "text-sm text-blue-700" }, "You'll see terms like ", React.createElement("strong", null, "HALT"), " (Hungry, Angry, Lonely, Tired) and ", React.createElement("strong", null, "Inventory"), " (self-reflection). Don't worry if they're new\u2014the Workbook and Journal are here to guide you.")
-            ),
-            React.createElement("button", { 
-                onClick: onDismiss, 
-                className: "text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-200 transition-colors flex-shrink-0", 
-                "aria-label": "Dismiss welcome tip" 
-            }, React.createElement(XIcon, null))
-        )
-    );
-};
-
-
-// --- COMPONENT: Dashboard ---
-const Dashboard = ({ onNavigate, sobrietyStartDate }) => {
-    // Select a random fact on component render
-    const randomFact = useMemo(() => {
-        const randomIndex = Math.floor(Math.random() * RECOVERY_FACTS.length);
-        return RECOVERY_FACTS[randomIndex];
-    }, []);
-    
-    // State for Onboarding Tip
-    const [isTipDismissed, setIsTipDismissed] = useState(LocalDataStore.load(LocalDataStore.KEYS.WELCOME_TIP));
-
-    const handleDismissTip = () => {
-        LocalDataStore.save(LocalDataStore.KEYS.WELCOME_TIP, 'true');
-        setIsTipDismissed(true);
-    };
-
-    const menuItems = [
-        { view: 'journal', label: 'Daily Journal', icon: React.createElement(BookOpenIcon, null) },
-        { view: 'goals', label: 'My Goals', icon: React.createElement(TargetIcon, null) },
-        { view: 'coping', label: 'Coping Cards', icon: React.createElement(ShieldIcon, null) },
-        { view: 'workbook', label: 'Recovery Workbook', icon: React.createElement(ClipboardListIcon, null) },
-        { view: 'literature', label: 'Recovery Literature', icon: React.createElement(LibraryIcon, null) },
-        { view: 'finder', label: 'Meeting Finder', icon: React.createElement(MapPinIcon, null) },
-        { view: 'resources', label: 'S.O.S. Resources', icon: React.createElement(LifeBuoyIcon, null) },
-    ];
-    return ( 
-        React.createElement("div", { className: "animate-fade-in space-y-6" },
-            // Display Welcome Tip if not dismissed
-            !isTipDismissed && React.createElement(WelcomeTip, { onDismiss: handleDismissTip }),
-            
-            // Display Random Fact
-            React.createElement("div", { className: "text-center p-3 bg-yellow-50 rounded-xl shadow-sm border border-yellow-200" },
-                React.createElement("p", { className: "text-sm font-medium text-yellow-800 italic" }, "Recovery Insight: ", randomFact)
-            ),
-
-            React.createElement(SobrietyTracker, { startDate: sobrietyStartDate }),
-            React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-4" },
-                menuItems.map(item => ( 
-                    React.createElement("button", { key: item.view, onClick: () => onNavigate(item.view), className: "flex items-center p-6 bg-white rounded-xl shadow-lg hover:shadow-xl hover:bg-teal-50 transition-all transform hover:-translate-y-1" },
-                        React.createElement("div", { className: "text-teal-500 mr-4" }, item.icon),
-                        React.createElement("span", { className: "text-lg font-semibold text-gray-700" }, item.label)
-                    )
-                ))
-            )
-        ) 
-    );
-};
-
-// --- COMPONENT: Settings ---
-const Settings = ({ currentStartDate, handleSobrietyDateUpdate, onBack }) => {
-    const initialDateString = useMemo(() => {
-        if (currentStartDate instanceof Date && !isNaN(currentStartDate)) {
-            return currentStartDate.toISOString().split('T')[0];
-        }
-        return new Date().toISOString().split('T')[0];
-    }, [currentStartDate]);
-
-    const [newDate, setNewDate] = useState(initialDateString);
-    const [journalChecked, setJournalChecked] = useState(false);
-    const [exporting, setExporting] = useState(false); // NEW State
-
-    const handleSave = () => {
-        const updatedDate = new Date(newDate);
-        handleSobrietyDateUpdate(updatedDate, journalChecked);
-    };
-    
-    // NEW: Data Export Handler
-    const handleExportData = () => {
-        setExporting(true);
-        const data = LocalDataStore.loadAll();
-        const jsonString = JSON.stringify(data, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `recovery_data_export_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        URL.revokeObjectURL(url);
-        setExporting(false);
-    };
-
-    return (
-        React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col" },
-            React.createElement("button", { onClick: onBack, className: "flex items-center text-teal-600 hover:text-teal-800 mb-6 font-semibold flex-shrink-0" },
-                React.createElement(ArrowLeftIcon, null),
-                React.createElement("span", { className: "ml-2" }, "Back to Dashboard")
-            ),
-            
-            React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, "Settings"),
-            React.createElement("p", { className: "text-gray-600 mb-6" }, "Manage your core application details."),
-
-            React.createElement("div", { className: "space-y-8" },
-                /* Sobriety Date Picker */
-                React.createElement("div", { className: "p-4 bg-gray-50 rounded-lg" },
-                    React.createElement("label", { className: "block text-sm font-bold text-gray-700 mb-2" }, "Change Sobriety Start Date"),
-                    React.createElement("input", {
-                        type: "date",
-                        value: newDate,
-                        onChange: (e) => setNewDate(e.target.value),
-                        className: "w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500"
-                    }),
-                    React.createElement("p", { className: "text-xs text-gray-500 mt-2" }, "Current Date: ", currentStartDate.toLocaleDateString()),
-                    React.createElement("div", { className: "flex items-start mt-4" },
-                        React.createElement("input", {
-                            id: "journal-change",
-                            type: "checkbox",
-                            checked: journalChecked,
-                            onChange: (e) => setJournalChecked(e.target.checked),
-                            className: "h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mt-1"
-                        }),
-                        React.createElement("label", { htmlFor: "journal-change", className: "ml-3 text-sm text-gray-600 cursor-pointer" },
-                            React.createElement("strong", null, "**Journal about this date change?**"),
-                            React.createElement("span", { className: "block text-xs text-gray-500" }, "I recommend reflecting on why your sobriety date is being adjusted.")
-                        )
-                    ),
-                    /* Save Button */
-                    React.createElement("button", {
-                        onClick: handleSave,
-                        className: "w-full mt-4 bg-teal-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-700 transition-colors"
-                    }, "Update Date")
-                ),
-                
-                /* Data Export Section */
-                React.createElement("div", { className: "p-4 bg-yellow-50 rounded-lg border border-yellow-200" },
-                    React.createElement("h3", { className: "flex items-center gap-2 text-lg font-bold text-yellow-800 mb-2" }, React.createElement(FileTextIcon, null), " Data Management"),
-                    React.createElement("p", { className: "text-sm text-gray-700 mb-4" }, "Export all your data (Journal, Goals, Workbook responses) as a JSON file. This is crucial for backing up your private data as it is ", React.createElement("strong", null, "not stored on a server"), "."),
-                    React.createElement("button", {
-                        onClick: handleExportData,
-                        disabled: exporting,
-                        className: "w-full flex items-center justify-center gap-2 bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-yellow-700 transition-colors disabled:bg-gray-400"
-                    },
-                        exporting ? React.createElement(Spinner, { small: true }) : React.createElement(DownloadIcon, null),
-                        exporting ? 'Preparing Data...' : 'Export All Data (.json)'
-                    )
-                )
-            )
-        )
-    );
-};
-
-// --- COMPONENT: GeminiJournalHelper (JSX converted to React.createElement for module compatibility) ---
-const GeminiJournalHelper = ({ onInsertText, onClose }) => {
-    const [prompt, setPrompt] = useState(''); const [isLoading, setIsLoading] = useState(false); const [result, setResult] = useState(''); const [error, setError] = useState('');
-    const handleGenerate = async () => {
-        if (!prompt.trim()) { setError('Please enter a topic or feeling.'); return; }
-        setIsLoading(true); setResult(''); setError('');
-        const systemPrompt = "You are a gentle and supportive journaling assistant for someone in recovery... Start the entry naturally, without greetings like 'Dear Journal'.";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=`;
-        try {
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } }) });
-            if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
-            const data = await response.json(); const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) setResult(text); else throw new Error("No text returned.");
-        } catch (e) { console.error("Gemini API call failed:", e); setError("Sorry, I couldn't generate a response right now."); } finally { setIsLoading(false); }
-    };
-    return ( React.createElement("div", { className: "p-4 border-t-2 border-teal-100 mt-4 space-y-3" }, React.createElement("p", { className: "text-sm text-gray-600 font-semibold" }, "Need help starting? Give the AI a topic."), React.createElement("textarea", { value: prompt, onChange: (e) => setPrompt(e.target.value), placeholder: "e.g., 'Feeling grateful' or 'Anxious about work'...", className: "w-full p-2 border border-gray-300 rounded-lg text-sm", rows: "2" }), React.createElement("button", { onClick: handleGenerate, disabled: isLoading, className: "w-full bg-teal-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-teal-600 disabled:bg-gray-400 flex items-center justify-center" }, isLoading ? React.createElement(Spinner, { small: true }) : 'Generate Idea'), error && React.createElement("p", { className: "text-red-500 text-sm" }, error), result && ( React.createElement("div", { className: "p-3 bg-gray-100 rounded-lg space-y-3" }, " ", React.createElement("p", { className: "text-gray-800 text-sm" }, result), " ", React.createElement("button", { onClick: () => { onInsertText(result); onClose(); }, className: "w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600" }, "Use This Entry"), " ") )) );
-};
-
-// --- COMPONENT: DebouncedTextarea ---
-const DebouncedTextarea = ({ value, onChange, placeholder, rows, isInput = false, isDisabled = false }) => {
-    const [localValue, setLocalValue] = useState(value);
-
-    const handleChange = (e) => {
-        setLocalValue(e.target.value);
-    };
-
-    useEffect(() => {
-        if (value !== localValue) {
-            setLocalValue(value);
-        }
-    }, [value]);
-
-    useEffect(() => {
-        if (localValue === value) {
-            return;
-        }
-        
-        const handler = setTimeout(() => {
-            onChange(localValue);
-        }, 300);
-
-        return () => {
-            clearTimeout(handler);
-        };
-    }, [localValue, onChange]);
-
-    const commonProps = {
-        value: localValue,
-        onChange: handleChange,
-        placeholder: placeholder,
-        className: `w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500 ${isInput ? '' : 'resize-none'} ${isDisabled ? 'bg-gray-100' : ''}`,
-        disabled: isDisabled,
-    };
-
-    if (isInput) {
-         return React.createElement("input", { type: "text", ...commonProps });
-    } else {
-        return React.createElement("textarea", { rows: rows, ...commonProps });
-    }
-};
-
-
-// --- GENERIC MODULES (Journal, Goals) ---
-const createListModule = (config) => {
-    const storageKey = config.collectionName === 'journal' ? LocalDataStore.KEYS.JOURNAL : LocalDataStore.KEYS.GOALS;
-
-    return ({ journalTemplate, setJournalTemplate }) => {
-        const isJournal = config.collectionName === 'journal';
-        const [items, setItems] = useState([]);
-        const [newItem, setNewItem] = useState('');
-        const [editingItem, setEditingItem] = useState(null);
-        const [editedText, setEditedText] = useState('');
-        const [isLoading, setIsLoading] = useState(true);
-        const [showGeminiHelper, setShowGeminiHelper] = useState(false);
-        const [selectedTemplateId, setSelectedTemplateId] = useState('');
-        
-        const [isEditingExisting, setIsEditingExisting] = useState(false);
-        const [itemToEditId, setItemToEditId] = useState(null);
-
-
-        // Persistence handler
-        const saveItemsToLocal = useCallback((updatedItems) => {
-            const sortAndSet = updatedItems.sort((a, b) => (b.timestamp.getTime()) - (a.timestamp.getTime()));
-            setItems(sortAndSet);
-            const serializableItems = sortAndSet.map(item => ({
-                ...item,
-                timestamp: item.timestamp.toISOString()
-            }));
-            LocalDataStore.save(storageKey, serializableItems);
-        }, [storageKey]);
-
-        // Load data on initial render
-        useEffect(() => {
-            const loadedItems = LocalDataStore.load(storageKey);
-            const formattedItems = loadedItems.map(item => ({
-                ...item,
-                // Convert ISO string back to Date object
-                timestamp: item.timestamp ? new Date(item.timestamp) : new Date(0)
-            })).sort((a, b) => (b.timestamp.getTime()) - (a.timestamp.getTime()));
-
-            setItems(formattedItems);
-            setIsLoading(false);
-        }, [storageKey]);
-        
-        // Handle template injection from Coping Cards and Dashboard Templates
-        useEffect(() => {
-            if (journalTemplate && setJournalTemplate && isJournal) {
-                setNewItem(journalTemplate);
-                setJournalTemplate(''); 
-            }
-        }, [journalTemplate, setJournalTemplate, isJournal]);
-
-        // Template Application Handler (Only for Journal)
-        const handleApplyTemplate = () => {
-            const templateObj = journalTemplates.find(t => t.id === selectedTemplateId);
-            if (templateObj && templateObj.template) {
-                setNewItem(templateObj.template);
-            }
-            setSelectedTemplateId('');
-        };
-        
-        // --- JOURNALING LOGIC ---
-
-        const handleStartEditJournal = (item) => {
-            setItemToEditId(item.id);
-            setNewItem(item.text);
-            setIsEditingExisting(true);
+        // --- APPLICATION VERSIONING ---
+        const APP_VERSIONS = {
+            DASHBOARD: '1.3.1', // Updated
+            JOURNAL: '1.4.0', 
+            GOALS: '1.1.1', // Updated
+            COPING: '2.1.0', 
+            WORKBOOK: '1.4.1',
+            LITERATURE: '1.1.0',
+            RESOURCES: '1.0.0',
+            SETTINGS: '1.0.1', // Updated
+            MEETINGFINDER: '1.0.0',
         };
 
-        const handleCancelEditJournal = () => {
-            setItemToEditId(null);
-            setNewItem('');
-            setIsEditingExisting(false);
-        };
-
-        const handleSaveNewEntry = (e) => {
-            e.preventDefault();
-            if (newItem.trim() === '') return;
-            
-            if (isEditingExisting && itemToEditId) {
-                // --- UPDATE EXISTING ENTRY (Journal/Goals) ---
-                const updatedItems = items.map(item => 
-                    item.id === itemToEditId ? { ...item, text: newItem, timestamp: new Date() } : item
-                );
-                saveItemsToLocal(updatedItems);
-                handleCancelEditJournal();
-            } else {
-                // --- ADD NEW ENTRY ---
-                const newItemObject = { 
-                    id: LocalDataStore.generateId(), 
-                    text: newItem, 
-                    timestamp: new Date()
-                };
-                if (config.hasCompleted) newItemObject.completed = false;
-                
-                saveItemsToLocal([newItemObject, ...items]);
-                setNewItem('');
-            }
-        };
-        
-        // --- GOALS LOGIC (Stays inline editing for simplicity) ---
-
-        const handleToggleCompleted = (item) => {
-            if (!config.hasCompleted) return;
-            const updatedItems = items.map(i => 
-                i.id === item.id ? { ...i, completed: !i.completed } : i
-            );
-            saveItemsToLocal(updatedItems);
-        };
-
-        const handleDeleteItem = (id) => {
-            const updatedItems = items.filter(item => item.id !== id);
-            saveItemsToLocal(updatedItems);
-        };
-        
-        const handleEditGoals = (item) => {
-            setEditingItem(item);
-            setEditedText(item.text);
-        };
-
-        const handleUpdateGoals = (e) => {
-            e.preventDefault();
-            if (!editingItem || editedText.trim() === '') return;
-
-            const updatedItems = items.map(item => 
-                item.id === editingItem.id ? { ...item, text: editedText, timestamp: new Date() } : item
-            );
-            
-            saveItemsToLocal(updatedItems);
-            setEditingItem(null);
-            setEditedText('');
-        };
-        
-        // --- RENDER FUNCTIONS ---
-
-        const JournalForm = () => (
-            React.createElement("form", { onSubmit: handleSaveNewEntry, className: "mb-2 space-y-2" },
-                isEditingExisting && (
-                    React.createElement("div", { className: "flex justify-between items-center bg-teal-50 p-3 rounded-lg mb-4" },
-                        React.createElement("p", { className: "text-sm font-semibold text-teal-700" }, "Editing Entry from: ", items.find(i => i.id === itemToEditId)?.timestamp.toLocaleString()),
-                        React.createElement("button", { type: "button", onClick: handleCancelEditJournal, className: "text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded" }, "Cancel")
-                    )
-                ),
-                
-                /* Template Selector (Only for Journal) */
-                !isEditingExisting && isJournal && (
-                    React.createElement("div", { className: "flex gap-2" },
-                        React.createElement("select", { 
-                            value: selectedTemplateId, 
-                            onChange: (e) => setSelectedTemplateId(e.target.value), 
-                            className: "flex-grow p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500"
-                        },
-                            journalTemplates.map(template => (
-                                React.createElement("option", { key: template.id, value: template.id, disabled: !template.id ? true : false }, template.name)
-                            ))
-                        ),
-                        React.createElement("button", { 
-                            type: "button", 
-                            onClick: handleApplyTemplate, 
-                            disabled: !selectedTemplateId, 
-                            className: "bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 disabled:bg-gray-400 flex items-center gap-1 transition-colors"
-                        }, React.createElement(CheckIcon, null), " Apply")
-                    )
-                ),
+        // --- RECOVERY INSIGHTS/FACTS DATA ---
+        const RECOVERY_FACTS = [
+            "The Serenity Prayer was popularized by AA, but was originally written by theologian Reinhold Niebuhr.",
+            "AA's Big Book was first published in 1939 and its core text (first 164 pages) remains unchanged.",
+            "The 12 Traditions were developed to guide AA groups in their relationships with the world, not just to guide the individual.",
+            "The motto 'Just for Today' is commonly used across many 12-Step fellowships to emphasize living in the present moment.",
+            "The first Narcotics Anonymous meeting was held in Southern California in 1953.",
+            "The concept of 'Higher Power' is intentionally non-religious and can be defined as 'God as we understood Him'.",
+            "The opposite of addiction is often cited as connection, emphasizing the importance of fellowship.",
+            "The 'HALT' acronym (Hungry, Angry, Lonely, Tired) is a fundamental tool for recognizing relapse triggers.",
+            "The Step 4 inventory is 'searching and fearless' because admitting the 'exact nature' of wrongs releases their power.",
+            "CA (Cocaine Anonymous) uses the same 12 Steps and 12 Traditions as AA.",
+        ];
 
 
-                /* Input/Textarea field - USING DEBOUNCED COMPONENT */
-                React.createElement(DebouncedTextarea, {
-                    value: newItem,
-                    onChange: setNewItem,
-                    placeholder: config.placeholder,
-                    rows: isJournal ? "10" : "1", 
-                    isInput: !isJournal
-                }),
-
-                /* Submit button(s) */
-                React.createElement("div", { className: `flex justify-end gap-2` },
-                    
-                    React.createElement("button", { type: "submit", className: "w-full bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700" }, isEditingExisting ? 'Save Changes' : 'Add New Entry')
-                )
-            )
-        );
-        
-        const GoalsForm = () => (
-            React.createElement("form", { onSubmit: handleSaveNewEntry, className: "flex gap-2 mb-6" },
-                 React.createElement(DebouncedTextarea, {
-                    value: newItem,
-                    onChange: setNewItem,
-                    placeholder: config.placeholder,
-                    isInput: false, // Allow textarea for multi-line goals
-                    rows: "2"
-                }),
-                React.createElement("button", { type: "submit", className: "flex-shrink-0 bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 transition-colors" }, "Add")
-            )
-        );
-
-
-        return ( 
-            React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col" }, 
-                React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, config.title), 
-                React.createElement("p", { className: "text-gray-600 mb-6" }, config.prompt), 
-                
-                isJournal ? React.createElement(JournalForm, null) : React.createElement(GoalsForm, null),
-
-                config.useGemini && isJournal && (
-                    React.createElement(React.Fragment, null, 
-                        React.createElement("button", { onClick: () => setShowGeminiHelper(!showGeminiHelper), className: "flex items-center justify-center gap-2 text-sm text-teal-600 hover:text-teal-800 font-semibold mb-4" },
-                            React.createElement(SparklesIcon, null),
-                            " ",
-                            showGeminiHelper ? 'Close AI Helper' : 'Get Idea with AI'
-                        ), 
-                        showGeminiHelper && React.createElement(GeminiJournalHelper, { onInsertText: (text) => setNewItem(text), onClose: () => setShowGeminiHelper(false) })
-                    )
-                ), 
-                
-                React.createElement("div", { className: "flex-grow overflow-y-auto pr-2 -mr-2 mt-4" }, 
-                    isLoading ? React.createElement(Spinner, null) : (items.length > 0 ? ( 
-                        React.createElement("ul", { className: "space-y-3" }, 
-                            items.map(item => ( 
-                                React.createElement("li", { key: item.id, className: "p-4 bg-gray-50 rounded-lg shadow-sm" },
-                                    config.collectionName === 'goals' && editingItem?.id === item.id ? (
-                                        React.createElement("form", { onSubmit: handleUpdateGoals, className: "space-y-2" },
-                                            React.createElement("textarea", {
-                                                value: editedText,
-                                                onChange: (e) => setEditedText(e.target.value),
-                                                className: "w-full p-2 border border-teal-500 rounded-lg resize-none",
-                                                rows: 2
-                                            }),
-                                            React.createElement("div", { className: "flex justify-end gap-2" },
-                                                React.createElement("button", { type: "button", onClick: () => setEditingItem(null), className: "text-gray-500 hover:text-gray-700 text-sm font-semibold" }, "Cancel"),
-                                                React.createElement("button", { type: "submit", className: "bg-teal-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-teal-600 font-semibold" }, "Save Changes")
-                                            )
-                                        )
-                                    ) : (
-                                        React.createElement("div", { className: "flex flex-col" },
-                                            React.createElement("div", { className: "flex items-start justify-between w-full" },
-                                                config.hasCompleted && React.createElement("input", { type: "checkbox", checked: item.completed, onChange: () => handleToggleCompleted(item), className: "h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mr-4 flex-shrink-0 mt-1"}),
-                                                React.createElement("div", { className: "flex-grow" },
-                                                    React.createElement("p", { className: `text-gray-800 whitespace-pre-wrap ${item.completed ? 'line-through text-gray-400' : ''}` }, item.text),
-                                                    React.createElement("p", { className: "text-xs text-gray-400 mt-1" }, item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Just now')
-                                                )
-                                            ),
-                                            React.createElement("div", { className: "flex justify-end mt-2 space-x-2" },
-                                                isJournal ? (
-                                                    React.createElement("button", { onClick: () => handleStartEditJournal(item), className: "text-gray-500 hover:text-blue-600 text-xs font-semibold flex items-center gap-1" },
-                                                        React.createElement(EditIcon, null), " Edit"
-                                                    )
-                                                ) : (
-                                                    React.createElement("button", { onClick: () => handleEditGoals(item), className: "text-gray-500 hover:text-blue-600 text-xs font-semibold flex items-center gap-1" },
-                                                        React.createElement(EditIcon, null), " Edit"
-                                                    )
-                                                ),
-                                                React.createElement("button", { onClick: () => handleDeleteItem(item.id), className: "text-gray-500 hover:text-red-500 text-xs font-semibold flex items-center gap-1" },
-                                                    React.createElement(TrashIcon, null), " Delete"
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )) 
-                        ) : ( React.createElement("div", { className: "text-center py-10" }, React.createElement("p", { className: "text-gray-500" }, config.emptyState)))
-                    )
-                ) 
-            )
-        );
-    };
-};
-const DailyJournal = createListModule({ collectionName: 'journal', title: 'Daily Journal', prompt: 'How are you feeling? You can write about your day, feelings, or things you are grateful for.', placeholder: 'Write your entry...', emptyState: 'No journal entries yet.', useGemini: true });
-const Goals = createListModule({ collectionName: 'goals', title: 'My Goals', prompt: 'Set small, achievable goals for your recovery.', placeholder: 'e.g., Attend a meeting or Call my sponsor tonight', emptyState: 'No goals set yet.', hasCompleted: true });
-
-// --- COMPONENT: Resources (JSX converted to React.createElement for module compatibility) ---
-const Resources = () => ( React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in" }, React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-2" }, "S.O.S. Resources"), React.createElement("p", { className: "text-gray-600 mb-6" }, "You are not alone. Help is available."), React.createElement("ul", { className: "space-y-4" }, [ { name: "SAMHSA National Helpline", number: "1-800-662-4357", description: "Confidential free help to find substance use treatment and information." }, { name: "National Suicide Prevention Lifeline", number: "988", description: "24/7, free and confidential support for people in distress." }, { name: "Alcoholics Anonymous (A.A.)", link: "https://www.aa.org", description: "Find local and online meetings and resources." }, { name: "Narcotics Anonymous (N.A.)", link: "https://www.na.org", description: "Find local and online meetings and resources." } ].map(item => ( React.createElement("li", { key: item.name, className: "p-4 bg-gray-50 rounded-lg shadow-sm" }, React.createElement("h3", { className: "font-bold text-teal-700" }, item.name), React.createElement("p", { className: "text-gray-600 my-1" }, item.description), item.number && React.createElement("a", { href: `tel:${item.number}`, className: "text-blue-600 font-semibold hover:underline" }, item.number), item.link && React.createElement("a", { href: item.link, target: "_blank", rel: "noopener noreferrer", className: "text-blue-600 font-semibold hover:underline" }, "Visit Website"))))) ));
-
-// --- COMPONENT: Meeting Finder (JSX converted to React.createElement for module compatibility) ---
-const MeetingFinder = () => {
-    const [selectedFellowship, setSelectedFellowship] = useState('AA');
-
-    const selectedData = MEETING_LINKS[selectedFellowship];
-
-    return (
-        React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col" },
-            React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4" }, "Meeting Finder"),
-            React.createElement("p", { className: "text-gray-600 mb-6" }, "Access official external resources to ", React.createElement("strong", null, "find local meetings"), " in your area."),
-            
-            React.createElement("div", { className: "space-y-4 mb-8" },
-                React.createElement("label", { className: "block text-sm font-medium text-gray-700" }, "Select Fellowship:"),
-                React.createElement("select", { 
-                    value: selectedFellowship,
-                    onChange: (e) => setSelectedFellowship(e.target.value),
-                    className: "w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500"
-                },
-                    Object.keys(MEETING_LINKS).map(key => (
-                        React.createElement("option", { key: key, value: key }, MEETING_LINKS[key].name)
-                    ))
-                )
-            ),
-
-            selectedData && (
-                React.createElement("div", { className: "bg-teal-50 p-6 rounded-lg border-l-4 border-teal-500 space-y-4" },
-                    React.createElement("h3", { className: "text-xl font-bold text-teal-800" }, selectedData.name, " Search"),
-                    React.createElement("p", { className: "text-gray-700" }, selectedData.instructions),
-                    React.createElement("a", { 
-                        href: selectedData.link, 
-                        target: "_blank", 
-                        rel: "noopener noreferrer",
-                        className: "inline-flex items-center justify-center w-full py-3 px-4 text-white font-semibold bg-teal-600 rounded-lg shadow-md hover:bg-teal-700 transition-colors"
-                    }, "Go to Official Finder")
-                )
-            ),
-            
-            React.createElement("div", { className: "mt-8 text-sm text-gray-500 border-t pt-4" },
-                React.createElement("p", null, "Tip: When the external site opens, use their geolocation features or search fields to find meetings near you.")
-            )
-        )
-    );
-};
-
-// --- COMPONENT: Coping Cards (JSX converted to React.createElement for module compatibility) ---
-const CopingCards = ({ onJournal }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const card = allCopingCards[currentIndex];
-    const maxIndex = allCopingCards.length - 1;
-
-    const showNextCard = () => {
-        setCurrentIndex((prevIndex) => (prevIndex + 1) % allCopingCards.length);
-    };
-
-    const showPreviousCard = () => {
-        setCurrentIndex((prevIndex) => (prevIndex - 1 + allCopingCards.length) % allCopingCards.length);
-    };
-
-    const CardIconComponent = card.icon;
-
-    return ( 
-        React.createElement("div", { className: "flex flex-col items-center justify-center h-full p-4 animate-fade-in" }, 
-            React.createElement("div", { 
-                className: `p-8 rounded-xl shadow-xl w-full max-w-md text-center flex-grow flex flex-col justify-between 
-                           bg-gradient-to-br ${card.color} text-gray-900 border border-gray-100`
+        // --- Literature Data (Truncated for brevity, full content is in your source) ---
+        const literatureData = {
+            aa_big_book: {
+                title: "The Big Book (Alcoholics Anonymous)",
+                pdfLink: "https://www.aa.org/sites/default/files/2021-11/en_bigbook_personalstories_1st.pdf",
+                chapters: [
+                    { title: "The Doctor's Opinion", content: `WE of Alcoholics Anonymous believe that the reader will be interested in the medical estimate of the plan of recovery described in this book. Convinced medical men...` },
+                    { title: "Chapter 1: Bill's Story", content: `WAR FEVER ran high in the New England town to which we new, young officers from Plattsburg were assigned, and we were flattered...` },
+                    { title: "Chapter 5: How It Works", content: `RARELY HAVE we seen a person fail who has thoroughly followed our path. Those who do not recover are people who cannot or will not completely give themselves to this simple program...` },
+                ]
             },
-                React.createElement("div", { className: "flex justify-between items-start mb-4" },
-                    React.createElement("button", { onClick: showPreviousCard, className: "text-gray-700 hover:text-black p-1 rounded-full bg-white/70 shadow-md" },
-                        React.createElement(ArrowLeftIcon, null)
-                    ),
-                    React.createElement("div", { className: "flex flex-col items-center" },
-                        React.createElement(CardIconComponent, { className: "w-8 h-8 text-teal-800 mb-2" }),
-                        React.createElement("p", { className: "text-xs font-semibold uppercase tracking-wider text-teal-800" }, card.category)
-                    ),
-                    React.createElement("button", { onClick: showNextCard, className: "text-gray-700 hover:text-black p-1 rounded-full bg-white/70 shadow-md" },
-                        React.createElement(ArrowLeftIcon, { style: { transform: 'rotate(180deg)' } })
-                    )
-                ),
-                
-                React.createElement("div", { className: "flex flex-col justify-center flex-grow" },
-                    React.createElement("h2", { className: "text-3xl font-bold text-teal-900 mb-4" }, card.title),
-                    React.createElement("p", { className: "text-gray-800 text-lg" }, card.description)
-                ),
-
-                React.createElement("p", { className: "text-xs text-gray-600 mt-4" }, "Card ", currentIndex + 1, " of ", allCopingCards.length)
-            ), 
-            
-            React.createElement("div", { className: "flex flex-col sm:flex-row gap-4 mt-6 w-full max-w-md" }, 
-                React.createElement("button", { onClick: () => onJournal(card), className: "w-full bg-white text-teal-600 border-2 border-teal-600 font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-50 transition-colors" }, "Journal on This")
-            ) 
-        ) 
-    );
-};
-
-// --- COMPONENT: Recovery Literature (JSX converted to React.createElement for module compatibility) ---
-const RecoveryLiterature = () => {
-    const [selectedBook, setSelectedBook] = useState(null); const [selectedChapter, setSelectedChapter] = useState(null);
-    const formatContent = (content) => content.split('\n\n').map((paragraph, index) => React.createElement("p", { key: index, className: "mb-4" }, paragraph.trim()));
-
-    if (selectedChapter) { 
-        return ( 
-            React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col" }, 
-                React.createElement("button", { onClick: () => setSelectedChapter(null), className: "flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold flex-shrink-0" }, React.createElement(ArrowLeftIcon, null), React.createElement("span", { className: "ml-2" }, "Back to Chapters")), 
-                React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4 flex-shrink-0" }, selectedChapter.title), 
-                React.createElement("div", { className: "prose-lg text-gray-700 overflow-y-auto flex-grow pr-2" }, formatContent(selectedChapter.content))
-            ) 
-        ); 
-    }
-    if (selectedBook) { 
-        return ( 
-            React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in" }, 
-                React.createElement("button", { onClick: () => setSelectedBook(null), className: "flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold" }, React.createElement(ArrowLeftIcon, null), React.createElement("span", { className: "ml-2" }, "Back to Library")), 
-                React.createElement("div", { className: "flex justify-between items-center mb-6" }, React.createElement("h2", { className: "text-2xl font-bold text-gray-800" }, selectedBook.title), React.createElement("a", { href: selectedBook.pdfLink, target: "_blank", rel: "noopener noreferrer", className: "flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600" }, React.createElement(DownloadIcon, null), "PDF")), 
-                React.createElement("ul", { className: "space-y-3" }, selectedBook.chapters.map((chapter, index) => ( React.createElement("li", { key: index }, React.createElement("button", { onClick: () => setSelectedChapter(chapter), className: "w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm" }, React.createElement("h3", { className: "font-semibold text-gray-800" }, chapter.title)))))
-            ) 
-        ); 
-    }
-    return ( 
-        React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in" }, React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-2" }, "Recovery Literature"), React.createElement("p", { className: "text-gray-600 mb-6" }, "Read or download foundational recovery texts."), React.createElement("ul", { className: "space-y-4" }, Object.keys(literatureData).map(key => { const book = literatureData[key]; return ( React.createElement("li", { key: key }, React.createElement("div", { className: "p-4 bg-gray-50 rounded-lg shadow-sm" }, React.createElement("div", { className: "flex justify-between items-start" }, React.createElement("div", null, React.createElement("h3", { className: "font-semibold text-gray-800 text-lg" }, book.title)), React.createElement("a", { href: book.pdfLink, target: "_blank", rel: "noopener noreferrer", className: "flex-shrink-0 ml-4 flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 text-sm" }, React.createElement(DownloadIcon, null), "PDF")), React.createElement("button", { onClick: () => setSelectedBook(book), className: "mt-4 w-full bg-teal-50 text-teal-700 font-semibold py-2 px-4 rounded-lg hover:bg-teal-100" }, "Read in App"))) ); }))
-    );
-};
-
-
-// --- WORKBOOK DATA STRUCTURES (Placeholder for brevity, full logic uses the workbookData structure from data.js) ---
-const workbookData = {
-    generalRecovery: { topics: [{ id: 'understanding-addiction' }] },
-    twelveSteps: { topics: [{ id: 'step-1', sections: [{ title: 'A. The Problem of Powerlessness', questions: [] }] }] }
-};
-// Note: Due to size constraints, I cannot include the massive workbookData structure here. 
-// It is assumed to be in data.js now, and the rest of the workbook logic uses this structure correctly.
-// I will create a dummy structure to avoid runtime errors, but the real logic is separated.
-Object.assign(workbookData, {
-    generalRecovery: { title: "General Recovery Exercises", description: "Core exercises for your recovery.", topics: [{ id: 'understanding-addiction', title: 'Understanding My Addiction', prompt: 'Reflect...' }] },
-    twelveSteps: { 
-        title: "12-Step Workbook", 
-        description: "A guide to working the 12 Steps...", 
-        topics: [ { id: 'step-1', title: 'Step 1: Honesty', quote: 'We admitted we were powerless...', sections: [{ title: "A. The Problem of Powerlessness", questions: ["1. In your own words..."] }] } ] 
-    }
-});
-
-
-const WorkbookQuestion = ({ questionText, questionKey }) => {
-    const [response, setResponse] = useState('');
-    const [saveStatus, setSaveStatus] = useState('');
-    const isInitialLoad = useRef(true);
-
-    useEffect(() => {
-        const data = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
-        setResponse(data[questionKey] || '');
-        setSaveStatus('Initial Load');
-    }, [questionKey]);
-
-    useEffect(() => {
-        if (isInitialLoad.current) {
-            isInitialLoad.current = false;
-            return;
-        }
-
-        setSaveStatus('Saving...');
-        
-        const delayDebounceFn = setTimeout(() => {
-            try {
-                const data = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
-                const updatedData = { ...data, [questionKey]: response };
-                LocalDataStore.save(LocalDataStore.KEYS.WORKBOOK, updatedData);
-                setSaveStatus('Saved');
-            } catch (error) {
-                console.error("Error saving workbook response:", error);
-                setSaveStatus('Error');
-            }
-        }, 1500);
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [response, questionKey]);
-
-    return (
-        React.createElement("div", { className: "mb-4 pb-2" },
-            React.createElement("p", { className: "workbook-question text-gray-800" }, questionText),
-            React.createElement("textarea", { 
-                value: response, 
-                onChange: (e) => setResponse(e.target.value), 
-                placeholder: "Write your answer here...", 
-                className: "w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500 resize-y min-h-[100px] text-sm",
-                rows: "4"
-            }),
-            React.createElement("p", { className: "text-right text-xs text-gray-500 mt-1 h-4" }, saveStatus === 'Saved' ? 'Saved' : (saveStatus === 'Saving...' ? 'Saving...' : '\u00A0'))
-        )
-    );
-};
-
-const CollapsibleWorkbookSection = ({ section, stepId }) => {
-    const [isCollapsed, setIsCollapsed] = useState(true);
-    const contentRef = useRef(null);
-    
-    const keyPrefix = `${stepId}-${section.title.charAt(0)}`; 
-    
-    useEffect(() => {
-        if (!isCollapsed && contentRef.current) {
-            contentRef.current.style.maxHeight = `${contentRef.current.scrollHeight}px`;
-        }
-    }, [isCollapsed]);
-
-    return (
-        React.createElement("div", { className: "mb-4 border border-gray-200 rounded-lg shadow-sm overflow-hidden" },
-            React.createElement("button", { 
-                onClick: () => setIsCollapsed(!isCollapsed),
-                className: `w-full flex justify-between items-center p-4 font-bold text-lg transition-colors ${isCollapsed ? 'bg-gray-50 hover:bg-gray-100 text-gray-700' : 'bg-teal-500 text-white hover:bg-teal-600'}`
-            },
-                section.title,
-                isCollapsed ? React.createElement(ChevronDown, null) : React.createElement(ChevronUp, null)
-            ),
-            
-            React.createElement("div", { 
-                ref: contentRef,
-                style: {
-                    maxHeight: isCollapsed ? '0' : '9999px',
-                    transition: 'max-height 0.4s ease-in-out',
-                },
-                className: "overflow-hidden p-4 bg-white"
-            },
-                section.questions.map((question, qIndex) => {
-                    const questionKey = `${keyPrefix}-${qIndex + 1}`;
-                    return (
-                        React.createElement(WorkbookQuestion, {
-                            key: questionKey,
-                            questionText: question,
-                            questionKey: questionKey
-                        })
-                    );
-                })
-            )
-        )
-    );
-};
-
-const WorkbookTopic = ({ topic, onBack }) => {
-    const [isLoading, setIsLoading] = useState(false); 
-    
-    if (isLoading) { return React.createElement("div", { className: "h-full flex items-center justify-center" }, React.createElement(Spinner, null)); }
-
-    return (
-        React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col" },
-            React.createElement("button", { onClick: onBack, className: "flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold flex-shrink-0" }, React.createElement(ArrowLeftIcon, null), React.createElement("span", { className: "ml-2" }, "Back to Topics")),
-            
-            React.createElement("h3", { className: "2xl font-bold text-gray-800 mb-2" }, topic.title),
-            
-            topic.quote && (
-                React.createElement("div", { className: "step-quote" }, topic.quote)
-            ),
-
-            React.createElement("div", { className: "overflow-y-auto flex-grow pr-2" },
-                topic.sections ? (
-                    topic.sections.map((section, secIndex) => (
-                        React.createElement(CollapsibleWorkbookSection, { 
-                            key: secIndex, 
-                            section: section, 
-                            stepId: topic.id 
-                        })
-                    ))
-                ) : (
-                    React.createElement("p", { className: "text-gray-600 mb-6" }, topic.prompt)
-                )
-            )
-        )
-    );
-};
-
-const WorkbookCategory = ({ category, onSelectTopic, onBack, completedTopicIds }) => (
-    React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in" },
-        React.createElement("button", { onClick: onBack, className: "flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold" }, React.createElement(ArrowLeftIcon, null), React.createElement("span", { className: "ml-2" }, "Back to Workbook Sections")),
-        React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-2" }, category.title),
-        React.createElement("p", { className: "text-gray-600 mb-6" }, category.description),
-        React.createElement("ul", { className: "space-y-3" },
-            category.topics.map(topic => (
-                React.createElement("li", { key: topic.id },
-                    React.createElement("button", { onClick: () => onSelectTopic(topic), className: "w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 flex items-center justify-between" },
-                        React.createElement("h3", { className: "font-semibold text-gray-800" }, topic.title),
-                        completedTopicIds.includes(topic.id) && React.createElement(CheckCircleIcon, { className: "text-green-500" })
-                    )
-                )
-            ))
-        )
-    )
-);
-
-const RecoveryWorkbook = () => {
-    const [activeCategory, setActiveCategory] = useState(null); 
-    const [selectedTopic, setSelectedTopic] = useState(null); 
-    const [workbookResponses, setWorkbookResponses] = useState({});
-
-    useEffect(() => {
-        const loadedData = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
-        setWorkbookResponses(loadedData);
-        
-        const handleStorageChange = (e) => {
-            if (e.key === LocalDataStore.KEYS.WORKBOOK) {
-                setWorkbookResponses(LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {});
+            na_basic_text: {
+                title: "The Basic Text (Narcotics Anonymous)",
+                pdfLink: "https://www.na.org/admin/include/spaw2/uploads/pdf/litfiles/us_english/Book/Sixth%20Edition%20Basic%20Text.pdf",
+                chapters: [
+                    { title: "Who is an Addict?", content: `Most of us do not have to think twice about this question. We know! Our whole life and thinking was centered in drugs in one form or another...` },
+                    { title: "What is the Narcotics Anonymous Program?", content: `N.A. is a nonprofit fellowship or society of men and women for whom drugs had become a major problem. We are recovering addicts who meet regularly to help each other stay clean...` },
+                ]
             }
         };
-        window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
-    }, []);
 
-    // NOTE: This useMemo is still referencing the global workbookData (which is now a dummy/placeholder)
-    // The actual workbook logic lives in the complex question/section components which are mostly unchanged.
-    const completedTopicIds = useMemo(() => {
-        const completed = new Set();
-        
-        Object.values(workbookData).forEach(category => {
-            if (category && category.topics) {
-                category.topics.forEach(topic => {
-                    let topicHasContent = false;
-                    
-                    if (topic.sections) {
-                        // 12-Step Topics
-                        topic.sections.forEach(section => {
-                            section.questions.forEach((_, index) => {
-                                const key = `${topic.id}-${section.title.charAt(0)}-${index + 1}`;
-                                if (workbookResponses[key] && workbookResponses[key].trim().length > 0) {
-                                    topicHasContent = true;
-                                }
-                            });
-                        });
-                    } else if (workbookResponses[topic.id] && workbookResponses[topic.id].trim().length > 0) {
-                        // General Topics
-                        topicHasContent = true;
+        // --- SVG Icons ---
+        const BookOpenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
+        const TargetIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
+        const LifeBuoyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"></line><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"></line><line x1="9.17" y1="14.83" x2="4.93" y2="19.07"></line></svg>;
+        const ClipboardListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" /></svg>;
+        const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
+        const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
+        const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
+        const SparklesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3L9.27 9.27L3 12l6.27 2.73L12 21l2.73-6.27L21 12l-6.27-2.73z"/></svg>;
+        const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+        const LibraryIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20v2H6.5A2.5 2.5 0 0 1 4 16.5v-11A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 1 4 14.5Z"/><path d="m2 7 2 5 2-5"/><path d="m8.5 7.5 4 4-4 4"/></svg>;
+        const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+        const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>;
+        const ChevronDown = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
+        const ChevronUp = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>;
+        const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+        const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 0-2 0l-.15-.09a2 2 0 0 0-2.73 2.73l.09.15a2 2 0 0 0 0 2l-.25.43a2 2 0 0 1-1.73 1H2v.44a2 2 0 0 0 2 2h.18a2 2 0 0 1 1.73 1l.25.43a2 2 0 0 0 0 2l-.09.15a2 2 0 0 0 2.73 2.73l.15-.09a2 2 0 0 1 2 0l.43.25a2 2 0 0 0 1 1.73v.18a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 0 2 0l.15.09a2 2 0 0 0 2.73-2.73l-.09-.15a2 2 0 0 0 0-2l.25-.43a2 2 0 0 1 1.73-1H22v-.44a2 2 0 0 0-2-2h-.18a2 2 0 0 1-1.73-1l-.25-.43a2 2 0 0 0 0-2l.09-.15a2 2 0 0 0-2.73-2.73l-.15.09a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V2a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
+        const MapPinIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.7c-4.4-4.4-8-8.2-8-11.7C4 5.3 7.6 2 12 2s8 3.3 8 8C20 13.5 16.4 17.3 12 21.7z"/><circle cx="12" cy="10" r="3"/></svg>;
+        const PhoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3.08a2 2 0 0 1-2 2A20 20 0 0 1 2 4a2 2 0 0 1 2-2h3.08a2 2 0 0 1 2 2v3.08a2 2 0 0 1-2 2l-1.08-1.08a10 10 0 0 0 6.9 6.9l-1.08-1.08a2 2 0 0 1 2 2z"/></svg>;
+        const PenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>;
+        const ZapIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+        const GridIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>;
+        const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+        const FileTextIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>;
+
+        // --- LOCAL STORAGE UTILITIES ---
+        const LocalDataStore = {
+            KEYS: { 
+                SOBRIETY: 'recovery_sobriety_date', 
+                JOURNAL: 'recovery_journal_entries', 
+                GOALS: 'recovery_goals', 
+                WORKBOOK: 'recovery_workbook_responses', 
+                WELCOME_TIP: 'recovery_welcome_tip_dismissed' // NEW KEY
+            },
+            load: (key) => {
+                try {
+                    const serializedData = localStorage.getItem(key);
+                    if (key === LocalDataStore.KEYS.SOBRIETY) {
+                        return serializedData === null ? null : JSON.parse(serializedData);
                     }
+                    if (key === LocalDataStore.KEYS.WELCOME_TIP) { // NEW CHECK
+                        return serializedData === 'true';
+                    }
+                    return serializedData === null ? [] : JSON.parse(serializedData);
+                } catch (error) {
+                    console.error(`Error loading data from localStorage for key ${key}:`, error);
+                    return key === LocalDataStore.KEYS.SOBRIETY ? null : (key === LocalDataStore.KEYS.WELCOME_TIP ? false : []);
+                }
+            },
+            save: (key, data) => {
+                try {
+                    const dataToStore = key === LocalDataStore.KEYS.SOBRIETY || key === LocalDataStore.KEYS.WELCOME_TIP
+                        ? data : JSON.stringify(data);
+                    localStorage.setItem(key, dataToStore);
+                } catch (error) {
+                    console.error(`Error saving data to localStorage for key ${key}:`, error);
+                }
+            },
+            // Collects all relevant data for export
+            loadAll: () => {
+                const allData = {};
+                for (const key in LocalDataStore.KEYS) {
+                    if (LocalDataStore.KEYS[key] !== LocalDataStore.KEYS.WELCOME_TIP) {
+                         const rawData = localStorage.getItem(LocalDataStore.KEYS[key]);
+                         if (rawData) {
+                             // Try to parse if it's not the raw sobriety date string
+                             try {
+                                 allData[LocalDataStore.KEYS[key]] = JSON.parse(rawData);
+                             } catch {
+                                 allData[LocalDataStore.KEYS[key]] = rawData;
+                             }
+                         }
+                    }
+                }
+                return allData;
+            },
+            generateId: () => Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+        };
 
-                    if (topicHasContent) {
+        // --- HOOK: useAuth (Simplified) ---
+        const useAuth = () => {
+            const user = useMemo(() => ({ uid: 'local_user_id' }), []);
+            return { user, isAuthLoading: false };
+        };
+
+        // --- COMPONENT: Spinner ---
+        const Spinner = ({ small = false }) => ( <div className={`flex justify-center items-center ${small ? '' : 'h-full'}`}><div className={`animate-spin rounded-full border-t-2 border-b-2 border-teal-500 ${small ? 'h-6 w-6' : 'h-16 w-16'}`}></div></div>);
+
+        // --- COMPONENT: SobrietyDataSetup ---
+        const SobrietyDataSetup = ({ onDateSet }) => {
+            const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+            const handleSave = () => {
+                const newStartDate = new Date(date);
+                LocalDataStore.save(LocalDataStore.KEYS.SOBRIETY, newStartDate.toISOString());
+                // Set the welcome tip to be visible for new users
+                LocalDataStore.save(LocalDataStore.KEYS.WELCOME_TIP, 'false');
+                onDateSet(newStartDate);
+            };
+            return ( <div className="flex flex-col items-center justify-center h-full p-6 bg-gray-50 rounded-xl shadow-lg animate-fade-in"><h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome</h2><p className="text-gray-600 mb-6 text-center">Let's start your journey. Please select your sobriety start date.</p><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full max-w-xs p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500" /><button onClick={handleSave} className="mt-6 bg-teal-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-700 transition-transform transform hover:scale-105">Begin Journey</button></div> );
+        };
+
+        // --- COMPONENT: SobrietyTracker ---
+        const SobrietyTracker = ({ startDate }) => {
+            const calculateTimeSober = () => {
+                const diff = new Date().getTime() - new Date(startDate).getTime();
+                return { days: Math.floor(diff / 86400000), hours: Math.floor((diff % 86400000) / 3600000), minutes: Math.floor((diff % 3600000) / 60000), seconds: Math.floor((diff % 60000) / 1000) };
+            };
+            const [timeSober, setTimeSober] = useState(calculateTimeSober());
+            useEffect(() => { const timer = setInterval(() => setTimeSober(calculateTimeSober()), 1000); return () => clearInterval(timer); }, [startDate]);
+            const timeUnits = [ { label: 'Days', value: timeSober.days }, { label: 'Hours', value: timeSober.hours }, { label: 'Minutes', value: timeSober.minutes }, { label: 'Seconds', value: timeSober.seconds } ];
+            return ( <div className="bg-white p-6 rounded-xl shadow-lg text-center"><h3 className="text-lg font-semibold text-gray-500 mb-4">You are on your path</h3><div className="grid grid-cols-4 gap-2 sm:gap-4">{timeUnits.map(unit => ( <div key={unit.label} className="flex flex-col items-center bg-gray-100 p-2 sm:p-3 rounded-lg"><span className="text-3xl sm:text-4xl font-bold text-teal-600">{String(unit.value).padStart(2, '0')}</span><span className="text-xs sm:text-sm text-gray-600 uppercase tracking-wider">{unit.label}</span></div> ))}</div></div> );
+        };
+
+        // --- COMPONENT: WelcomeTip (New Onboarding Component) ---
+        const WelcomeTip = ({ onDismiss }) => {
+            return (
+                <div className="p-4 bg-blue-100 border border-blue-300 rounded-xl shadow-md flex justify-between items-start mb-6">
+                    <div className="flex-grow pr-4">
+                        <p className="font-bold text-blue-800 mb-1">Welcome to Recovery</p>
+                        <p className="text-sm text-blue-700">
+                            You'll see terms like **HALT** (Hungry, Angry, Lonely, Tired) and **Inventory** (self-reflection). Don't worry if they're new—the Workbook and Journal are here to guide you.
+                        </p>
+                    </div>
+                    <button 
+                        onClick={onDismiss} 
+                        className="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-200 transition-colors flex-shrink-0"
+                        aria-label="Dismiss welcome tip"
+                    >
+                        <XIcon/>
+                    </button>
+                </div>
+            );
+        };
+
+        // --- COMPONENT: Dashboard ---
+        const Dashboard = ({ onNavigate, sobrietyStartDate }) => {
+            // Select a random fact on component render
+            const randomFact = useMemo(() => {
+                const randomIndex = Math.floor(Math.random() * RECOVERY_FACTS.length);
+                return RECOVERY_FACTS[randomIndex];
+            }, []);
+            
+            // NEW: State for Onboarding Tip
+            const [isTipDismissed, setIsTipDismissed] = useState(LocalDataStore.load(LocalDataStore.KEYS.WELCOME_TIP));
+
+            const handleDismissTip = () => {
+                LocalDataStore.save(LocalDataStore.KEYS.WELCOME_TIP, 'true');
+                setIsTipDismissed(true);
+            };
+
+            const menuItems = [
+                { view: 'journal', label: 'Daily Journal', icon: <BookOpenIcon /> },
+                { view: 'goals', label: 'My Goals', icon: <TargetIcon /> },
+                { view: 'coping', label: 'Coping Cards', icon: <ShieldIcon /> },
+                { view: 'workbook', label: 'Recovery Workbook', icon: <ClipboardListIcon /> },
+                { view: 'literature', label: 'Recovery Literature', icon: <LibraryIcon /> },
+                { view: 'finder', label: 'Meeting Finder', icon: <MapPinIcon /> }, // NEW MEETING FINDER
+                { view: 'resources', label: 'S.O.S. Resources', icon: <LifeBuoyIcon /> },
+            ];
+            return ( 
+                <div className="animate-fade-in space-y-6">
+                    {/* NEW: Display Welcome Tip if not dismissed */}
+                    {!isTipDismissed && <WelcomeTip onDismiss={handleDismissTip} />}
+                    
+                    {/* NEW: Display Random Fact */}
+                    <div className="text-center p-3 bg-yellow-50 rounded-xl shadow-sm border border-yellow-200">
+                        <p className="text-sm font-medium text-yellow-800 italic">Recovery Insight: {randomFact}</p>
+                    </div>
+
+                    <SobrietyTracker startDate={sobrietyStartDate} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {menuItems.map(item => ( 
+                            <button key={item.view} onClick={() => onNavigate(item.view)} className="flex items-center p-6 bg-white rounded-xl shadow-lg hover:shadow-xl hover:bg-teal-50 transition-all transform hover:-translate-y-1">
+                                <div className="text-teal-500 mr-4">{item.icon}</div><span className="text-lg font-semibold text-gray-700">{item.label}</span>
+                            </button> 
+                        ))}
+                    </div>
+                </div> 
+            );
+        };
+
+        // --- COMPONENT: Settings ---
+        const Settings = ({ currentStartDate, handleSobrietyDateUpdate, onBack }) => {
+            const initialDateString = useMemo(() => {
+                if (currentStartDate instanceof Date && !isNaN(currentStartDate)) {
+                    return currentStartDate.toISOString().split('T')[0];
+                }
+                return new Date().toISOString().split('T')[0];
+            }, [currentStartDate]);
+
+            const [newDate, setNewDate] = useState(initialDateString);
+            const [journalChecked, setJournalChecked] = useState(false);
+            const [exporting, setExporting] = useState(false); // NEW State
+
+            const handleSave = () => {
+                const updatedDate = new Date(newDate);
+                handleSobrietyDateUpdate(updatedDate, journalChecked);
+            };
+            
+            // NEW: Data Export Handler
+            const handleExportData = () => {
+                setExporting(true);
+                const data = LocalDataStore.loadAll();
+                const jsonString = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `recovery_data_export_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                URL.revokeObjectURL(url);
+                setExporting(false);
+            };
+
+            return (
+                <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col">
+                    <button onClick={onBack} className="flex items-center text-teal-600 hover:text-teal-800 mb-6 font-semibold flex-shrink-0">
+                        <ArrowLeftIcon /><span className="ml-2">Back to Dashboard</span>
+                    </button>
+                    
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Settings</h2>
+                    <p className="text-gray-600 mb-6">Manage your core application details.</p>
+
+                    <div className="space-y-8">
+                        {/* Sobriety Date Picker */}
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Change Sobriety Start Date</label>
+                            <input
+                                type="date"
+                                value={newDate}
+                                onChange={(e) => setNewDate(e.target.value)}
+                                className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500"
+                            />
+                            <p className="text-xs text-gray-500 mt-2">Current Date: {currentStartDate.toLocaleDateString()}</p>
+                            <div className="flex items-start mt-4">
+                                <input
+                                    id="journal-change"
+                                    type="checkbox"
+                                    checked={journalChecked}
+                                    onChange={(e) => setJournalChecked(e.target.checked)}
+                                    className="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mt-1"
+                                />
+                                <label htmlFor="journal-change" className="ml-3 text-sm text-gray-600 cursor-pointer">
+                                    **Journal about this date change?**
+                                    <span className="block text-xs text-gray-500">I recommend reflecting on why your sobriety date is being adjusted.</span>
+                                </label>
+                            </div>
+                            {/* Save Button */}
+                            <button
+                                onClick={handleSave}
+                                className="w-full mt-4 bg-teal-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-700 transition-colors"
+                            >
+                                Update Date
+                            </button>
+                        </div>
+                        
+                        {/* NEW: Data Export Section */}
+                        <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <h3 className="flex items-center gap-2 text-lg font-bold text-yellow-800 mb-2"><FileTextIcon/> Data Management</h3>
+                            <p className="text-sm text-gray-700 mb-4">
+                                Export all your data (Journal, Goals, Workbook responses) as a JSON file. This is crucial for backing up your private data as it is **not stored on a server**.
+                            </p>
+                            <button
+                                onClick={handleExportData}
+                                disabled={exporting}
+                                className="w-full flex items-center justify-center gap-2 bg-yellow-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-yellow-700 transition-colors disabled:bg-gray-400"
+                            >
+                                {exporting ? <Spinner small /> : <DownloadIcon />}
+                                {exporting ? 'Preparing Data...' : 'Export All Data (.json)'}
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        };
+        
+        // --- Journal Templates Data ---
+        const journalTemplates = [
+            { id: '', name: 'Select a Template...' },
+            { id: 'gratitude', name: '3-Part Gratitude Check', template: 'Today I am grateful for:\n1. (Person/Relationship)\n2. (Experience/Event)\n3. (Small Detail)\n\nHow did this feeling of gratitude influence my day?' },
+            { id: 'halt', name: 'The H.A.L.T. Check', template: 'Before reacting or craving, I will check:\n\n**H**ungry? (Yes/No): \n**A**ngry? (Yes/No): \n**L**onely? (Yes/No): \n**T**ired? (Yes/No): \n\nWhat action did I take to meet my true need?' },
+            { id: 'resentment', name: 'Resentment Filter', template: 'Today I felt resentful toward: (Person/Situation)\n\nWhat did they do? \n\nWhat part of my self-esteem (pride, security, ambition) did this threaten? \n\nWhat is my part in this situation?' },
+            { id: 'step_10', name: 'Step 10 Spot Check', template: 'Where was I wrong today? (Small admissions of fault or mistake)\n\nWas I mindful of others?\n\nDid I practice honesty in a difficult situation?\n\nIf I was wrong, did I promptly admit it?' },
+        ];
+
+
+        // --- COMPONENT: GeminiJournalHelper (Unchanged) ---
+        const GeminiJournalHelper = ({ onInsertText, onClose }) => {
+            const [prompt, setPrompt] = useState(''); const [isLoading, setIsLoading] = useState(false); const [result, setResult] = useState(''); const [error, setError] = useState('');
+            const handleGenerate = async () => {
+                if (!prompt.trim()) { setError('Please enter a topic or feeling.'); return; }
+                setIsLoading(true); setResult(''); setError('');
+                const systemPrompt = "You are a gentle and supportive journaling assistant for someone in recovery... Start the entry naturally, without greetings like 'Dear Journal'.";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=`;
+                try {
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } }) });
+                    if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                    const data = await response.json(); const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (text) setResult(text); else throw new Error("No text returned.");
+                } catch (e) { console.error("Gemini API call failed:", e); setError("Sorry, I couldn't generate a response right now."); } finally { setIsLoading(false); }
+            };
+            return ( <div className="p-4 border-t-2 border-teal-100 mt-4 space-y-3"><p className="text-sm text-gray-600 font-semibold">Need help starting? Give the AI a topic.</p><textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="e.g., 'Feeling grateful' or 'Anxious about work'..." className="w-full p-2 border border-gray-300 rounded-lg text-sm" rows="2"/><button onClick={handleGenerate} disabled={isLoading} className="w-full bg-teal-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-teal-600 disabled:bg-gray-400 flex items-center justify-center">{isLoading ? <Spinner small /> : 'Generate Idea'}</button>{error && <p className="text-red-500 text-sm">{error}</p>}{result && ( <div className="p-3 bg-gray-100 rounded-lg space-y-3"> <p className="text-gray-800 text-sm">{result}</p> <button onClick={() => { onInsertText(result); onClose(); }} className="w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600">Use This Entry</button> </div> )}</div> );
+        };
+        
+        // --- COMPONENT: DebouncedTextarea (The Fix) ---
+        const DebouncedTextarea = ({ value, onChange, placeholder, rows, isInput = false, isDisabled = false }) => {
+            const [localValue, setLocalValue] = useState(value);
+
+            // 1. Update local state immediately on keystroke
+            const handleChange = (e) => {
+                setLocalValue(e.target.value);
+            };
+
+            // 2. Sync local state with external value when external value changes (e.g., template applied)
+            useEffect(() => {
+                // Check if the external value differs from the local value
+                if (value !== localValue) {
+                    setLocalValue(value);
+                }
+            }, [value]);
+
+            // 3. Debounce the external update (calls the parent's onChange function)
+            useEffect(() => {
+                // Only debounce if the local value actually differs from the last committed external value
+                if (localValue === value) {
+                    return; // Avoid running timer if values are synchronized
+                }
+                
+                const handler = setTimeout(() => {
+                    onChange(localValue);
+                }, 300); // Debounce delay
+
+                return () => {
+                    clearTimeout(handler);
+                };
+            }, [localValue, onChange]); // Depend on localValue and external setter
+
+            const commonProps = {
+                value: localValue,
+                onChange: handleChange,
+                placeholder: placeholder,
+                className: `w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500 ${isInput ? '' : 'resize-none'} ${isDisabled ? 'bg-gray-100' : ''}`,
+                disabled: isDisabled,
+            };
+
+            if (isInput) {
+                // Use input for goals for simplicity, but wrap with DebouncedTextarea logic.
+                // NOTE: Goals now uses isInput=false for multi-line support.
+                 return <input type="text" {...commonProps} />;
+            } else {
+                return <textarea rows={rows} {...commonProps} />;
+            }
+        };
+
+        // --- GENERIC MODULES (Journal, Goals) ---
+        const createListModule = (config) => {
+            const storageKey = config.collectionName === 'journal' ? LocalDataStore.KEYS.JOURNAL : LocalDataStore.KEYS.GOALS;
+
+            return ({ journalTemplate, setJournalTemplate }) => {
+                const isJournal = config.collectionName === 'journal';
+                const [items, setItems] = useState([]);
+                const [newItem, setNewItem] = useState('');
+                const [editingItem, setEditingItem] = useState(null);
+                const [editedText, setEditedText] = useState('');
+                const [isLoading, setIsLoading] = useState(true);
+                const [showGeminiHelper, setShowGeminiHelper] = useState(false);
+                const [selectedTemplateId, setSelectedTemplateId] = useState('');
+                
+                // For editing Journal entries
+                const [isEditingExisting, setIsEditingExisting] = useState(false);
+                const [itemToEditId, setItemToEditId] = useState(null);
+
+
+                // Persistence handler
+                const saveItemsToLocal = useCallback((updatedItems) => {
+                    const sortAndSet = updatedItems.sort((a, b) => (b.timestamp.getTime()) - (a.timestamp.getTime()));
+                    setItems(sortAndSet);
+                    const serializableItems = sortAndSet.map(item => ({
+                        ...item,
+                        timestamp: item.timestamp.toISOString()
+                    }));
+                    LocalDataStore.save(storageKey, serializableItems);
+                }, [storageKey]);
+
+                // Load data on initial render
+                useEffect(() => {
+                    const loadedItems = LocalDataStore.load(storageKey);
+                    const formattedItems = loadedItems.map(item => ({
+                        ...item,
+                        // Convert ISO string back to Date object
+                        timestamp: item.timestamp ? new Date(item.timestamp) : new Date(0)
+                    })).sort((a, b) => (b.timestamp.getTime()) - (a.timestamp.getTime()));
+
+                    setItems(formattedItems);
+                    setIsLoading(false);
+                }, [storageKey]);
+                
+                // Handle template injection from Coping Cards and Dashboard Templates
+                useEffect(() => {
+                    if (journalTemplate && setJournalTemplate && isJournal) {
+                        setNewItem(journalTemplate);
+                        // Important: Clear the template state in the parent (App) component
+                        setJournalTemplate(''); 
+                    }
+                }, [journalTemplate, setJournalTemplate, isJournal]);
+
+                // Template Application Handler (Only for Journal)
+                const handleApplyTemplate = () => {
+                    const templateObj = journalTemplates.find(t => t.id === selectedTemplateId);
+                    if (templateObj && templateObj.template) {
+                        setNewItem(templateObj.template);
+                    }
+                    setSelectedTemplateId('');
+                };
+                
+                // --- JOURNALING LOGIC ---
+
+                const handleStartEditJournal = (item) => {
+                    setItemToEditId(item.id);
+                    setNewItem(item.text);
+                    setIsEditingExisting(true);
+                };
+
+                const handleCancelEditJournal = () => {
+                    setItemToEditId(null);
+                    setNewItem('');
+                    setIsEditingExisting(false);
+                };
+
+                const handleSaveNewEntry = (e) => {
+                    e.preventDefault();
+                    // Use newItem's current state, which is synced via DebouncedTextarea
+                    if (newItem.trim() === '') return;
+                    
+                    if (isEditingExisting && itemToEditId) {
+                        // --- UPDATE EXISTING ENTRY (Journal/Goals) ---
+                        const updatedItems = items.map(item => 
+                            item.id === itemToEditId ? { ...item, text: newItem, timestamp: new Date() } : item
+                        );
+                        saveItemsToLocal(updatedItems);
+                        handleCancelEditJournal(); // Clear edit state
+                    } else {
+                        // --- ADD NEW ENTRY ---
+                        const newItemObject = { 
+                            id: LocalDataStore.generateId(), 
+                            text: newItem, 
+                            timestamp: new Date()
+                        };
+                        if (config.hasCompleted) newItemObject.completed = false;
+                        
+                        saveItemsToLocal([newItemObject, ...items]);
+                        setNewItem('');
+                    }
+                };
+                
+                // --- GOALS LOGIC (Stays inline editing for simplicity) ---
+
+                const handleToggleCompleted = (item) => {
+                    if (!config.hasCompleted) return;
+                    const updatedItems = items.map(i => 
+                        i.id === item.id ? { ...i, completed: !i.completed } : i
+                    );
+                    saveItemsToLocal(updatedItems);
+                };
+
+                const handleDeleteItem = (id) => {
+                    const updatedItems = items.filter(item => item.id !== id);
+                    saveItemsToLocal(updatedItems);
+                };
+                
+                const handleEditGoals = (item) => { // Used for Goals module only
+                    setEditingItem(item);
+                    setEditedText(item.text);
+                };
+
+                const handleUpdateGoals = (e) => { // Used for Goals module only
+                    e.preventDefault();
+                    if (!editingItem || editedText.trim() === '') return;
+
+                    const updatedItems = items.map(item => 
+                        item.id === editingItem.id ? { ...item, text: editedText, timestamp: new Date() } : item
+                    );
+                    
+                    saveItemsToLocal(updatedItems);
+                    setEditingItem(null);
+                    setEditedText('');
+                };
+                
+                // --- RENDER FUNCTIONS ---
+
+                const JournalForm = () => (
+                    <form onSubmit={handleSaveNewEntry} className="mb-2 space-y-2">
+                        
+                        {isEditingExisting && (
+                            <div className="flex justify-between items-center bg-teal-50 p-3 rounded-lg mb-4">
+                                <p className="text-sm font-semibold text-teal-700">
+                                    Editing Entry from: {items.find(i => i.id === itemToEditId)?.timestamp.toLocaleString()}
+                                </p>
+                                <button type="button" onClick={handleCancelEditJournal} className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded">
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
+                        
+                        {/* Template Selector (Only for Journal) */}
+                        {!isEditingExisting && isJournal && (
+                            <div className="flex gap-2">
+                                <select 
+                                    value={selectedTemplateId} 
+                                    onChange={(e) => setSelectedTemplateId(e.target.value)} 
+                                    className="flex-grow p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500"
+                                >
+                                    {journalTemplates.map(template => (
+                                        <option key={template.id} value={template.id} disabled={!template.id ? true : false}>
+                                            {template.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <button 
+                                    type="button" 
+                                    onClick={handleApplyTemplate} 
+                                    disabled={!selectedTemplateId} 
+                                    className="bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 disabled:bg-gray-400 flex items-center gap-1 transition-colors"
+                                >
+                                    <CheckIcon /> Apply
+                                </button>
+                            </div>
+                        )}
+
+
+                        {/* Input/Textarea field - USING DEBOUNCED COMPONENT */}
+                        <DebouncedTextarea
+                            value={newItem}
+                            onChange={setNewItem} // Passes the debounced value to parent state
+                            placeholder={config.placeholder}
+                            rows={isJournal ? "10" : "1"} 
+                            isInput={!isJournal}
+                        />
+
+                        {/* Submit button(s) */}
+                        <div className={`flex justify-end gap-2`}>
+                            
+                            <button type="submit" className="w-full bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700">
+                                {isEditingExisting ? 'Save Changes' : 'Add New Entry'}
+                            </button>
+                        </div>
+                    </form>
+                );
+                
+                const GoalsForm = () => (
+                    <form onSubmit={handleSaveNewEntry} className="flex gap-2 mb-6">
+                         {/* FIX: Use DebouncedTextarea with multi-line support for better goal entry */}
+                         <DebouncedTextarea
+                            value={newItem}
+                            onChange={setNewItem}
+                            placeholder={config.placeholder}
+                            isInput={false} // Allow textarea for multi-line goals
+                            rows="2"
+                        />
+                        <button type="submit" className="flex-shrink-0 bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 transition-colors">Add</button>
+                    </form>
+                );
+
+
+                return ( 
+                    <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col"> 
+                        <h2 className="text-2xl font-bold text-gray-800 mb-4">{config.title}</h2> 
+                        <p className="text-gray-600 mb-6">{config.prompt}</p> 
+                        
+                        {isJournal ? <JournalForm /> : <GoalsForm />}
+
+                        {config.useGemini && isJournal && (
+                            <> 
+                                <button onClick={() => setShowGeminiHelper(!showGeminiHelper)} className="flex items-center justify-center gap-2 text-sm text-teal-600 hover:text-teal-800 font-semibold mb-4">
+                                    <SparklesIcon/> {showGeminiHelper ? 'Close AI Helper' : 'Get Idea with AI'}
+                                </button> 
+                                {showGeminiHelper && <GeminiJournalHelper onInsertText={(text) => setNewItem(text)} onClose={() => setShowGeminiHelper(false)} />} 
+                            </>
+                        )} 
+                        
+                        <div className="flex-grow overflow-y-auto pr-2 -mr-2 mt-4"> 
+                            {isLoading ? <Spinner /> : (items.length > 0 ? ( 
+                                <ul className="space-y-3"> 
+                                    {items.map(item => ( 
+                                        <li key={item.id} className="p-4 bg-gray-50 rounded-lg shadow-sm">
+                                            {/* We only use inline editing for GOALS now. Journal uses the main box. */}
+                                            {config.collectionName === 'goals' && editingItem?.id === item.id ? (
+                                                <form onSubmit={handleUpdateGoals} className="space-y-2">
+                                                    <textarea
+                                                        value={editedText}
+                                                        onChange={(e) => setEditedText(e.target.value)}
+                                                        className="w-full p-2 border border-teal-500 rounded-lg resize-none"
+                                                        rows={2}
+                                                    />
+                                                    <div className="flex justify-end gap-2">
+                                                        <button type="button" onClick={() => setEditingItem(null)} className="text-gray-500 hover:text-gray-700 text-sm font-semibold">Cancel</button>
+                                                        <button type="submit" className="bg-teal-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-teal-600 font-semibold">Save Changes</button>
+                                                    </div>
+                                                </form>
+                                            ) : (
+                                                <div className="flex flex-col">
+                                                    <div className="flex items-start justify-between w-full">
+                                                        {config.hasCompleted && <input type="checkbox" checked={item.completed} onChange={() => handleToggleCompleted(item)} className="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mr-4 flex-shrink-0 mt-1"/>}
+                                                        <div className="flex-grow">
+                                                            <p className={`text-gray-800 whitespace-pre-wrap ${item.completed ? 'line-through text-gray-400' : ''}`}>{item.text}</p>
+                                                            {/* Show formatted date/time */}
+                                                            <p className="text-xs text-gray-400 mt-1">{item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Just now'}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-end mt-2 space-x-2">
+                                                        {isJournal ? (
+                                                            // Journal edit loads to main box
+                                                            <button onClick={() => handleStartEditJournal(item)} className="text-gray-500 hover:text-blue-600 text-xs font-semibold flex items-center gap-1">
+                                                                <EditIcon /> Edit
+                                                            </button>
+                                                        ) : (
+                                                            // Goals edit loads inline
+                                                            <button onClick={() => handleEditGoals(item)} className="text-gray-500 hover:text-blue-600 text-xs font-semibold flex items-center gap-1">
+                                                                <EditIcon /> Edit
+                                                            </button>
+                                                        )}
+                                                        <button onClick={() => handleDeleteItem(item.id)} className="text-gray-500 hover:text-red-500 text-xs font-semibold flex items-center gap-1">
+                                                            <TrashIcon /> Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </li> 
+                                    ))} 
+                                </ul> 
+                            ) : ( <div className="text-center py-10"><p className="text-gray-500">{config.emptyState}</p></div> ))} 
+                        </div> 
+                    </div> 
+                );
+            };
+        };
+        const DailyJournal = createListModule({ collectionName: 'journal', title: 'Daily Journal', prompt: 'How are you feeling? You can write about your day, feelings, or things you are grateful for.', placeholder: 'Write your entry...', emptyState: 'No journal entries yet.', useGemini: true });
+        const Goals = createListModule({ collectionName: 'goals', title: 'My Goals', prompt: 'Set small, achievable goals for your recovery.', placeholder: 'e.g., Attend a meeting or Call my sponsor tonight', emptyState: 'No goals set yet.', hasCompleted: true });
+
+        // --- COMPONENT: Resources (Unchanged) ---
+        const Resources = () => ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"><h2 className="text-2xl font-bold text-gray-800 mb-2">S.O.S. Resources</h2><p className="text-gray-600 mb-6">You are not alone. Help is available.</p><ul className="space-y-4"> {[{ name: "SAMHSA National Helpline", number: "1-800-662-4357", description: "Confidential free help to find substance use treatment and information." }, { name: "National Suicide Prevention Lifeline", number: "988", description: "24/7, free and confidential support for people in distress." }, { name: "Alcoholics Anonymous (A.A.)", link: "https://www.aa.org", description: "Find local and online meetings and resources." }, { name: "Narcotics Anonymous (N.A.)", link: "https://www.na.org", description: "Find local and online meetings and resources." }].map(item => ( <li key={item.name} className="p-4 bg-gray-50 rounded-lg shadow-sm"><h3 className="font-bold text-teal-700">{item.name}</h3><p className="text-gray-600 my-1">{item.description}</p>{item.number && <a href={`tel:${item.number}`} className="text-blue-600 font-semibold hover:underline">{item.number}</a>}{item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold hover:underline">Visit Website</a>}</li> ))}</ul></div> );
+
+        // --- COMPONENT: Meeting Finder ---
+        const MEETING_LINKS = {
+            AA: {
+                name: "Alcoholics Anonymous (AA)",
+                description: "Find local, in-person, or online AA meetings.",
+                link: "https://www.aa.org/find-meetings",
+                instructions: "The official AA website provides local directories and search tools."
+            },
+            NA: {
+                name: "Narcotics Anonymous (NA)",
+                description: "Find local and online NA meetings.",
+                link: "https://www.na.org/meetingsearch/",
+                instructions: "Use the NA Meeting Locator to find times and locations in your area."
+            },
+            CA: {
+                name: "Cocaine Anonymous (CA)",
+                description: "Find CA meetings globally.",
+                link: "https://www.ca.org/meetings/",
+                instructions: "The CA website offers a global directory and online meeting resources."
+            }
+        };
+
+        const MeetingFinder = () => {
+            const [selectedFellowship, setSelectedFellowship] = useState('AA');
+
+            const selectedData = MEETING_LINKS[selectedFellowship];
+
+            // Note: Due to security and sandbox restrictions, we cannot use navigator.geolocation
+            // or access external meeting databases directly. We provide official web links instead.
+
+            return (
+                <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Meeting Finder</h2>
+                    <p className="text-gray-600 mb-6">Access official external resources to **find local meetings** in your area.</p>
+                    
+                    <div className="space-y-4 mb-8">
+                        <label className="block text-sm font-medium text-gray-700">Select Fellowship:</label>
+                        <select 
+                            value={selectedFellowship}
+                            onChange={(e) => setSelectedFellowship(e.target.value)}
+                            className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500"
+                        >
+                            {Object.keys(MEETING_LINKS).map(key => (
+                                <option key={key} value={key}>{MEETING_LINKS[key].name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {selectedData && (
+                        <div className="bg-teal-50 p-6 rounded-lg border-l-4 border-teal-500 space-y-4">
+                            <h3 className="text-xl font-bold text-teal-800">{selectedData.name} Search</h3>
+                            <p className="text-gray-700">{selectedData.instructions}</p>
+                            <a 
+                                href={selectedData.link} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center w-full py-3 px-4 text-white font-semibold bg-teal-600 rounded-lg shadow-md hover:bg-teal-700 transition-colors"
+                            >
+                                Go to Official Finder
+                            </a>
+                        </div>
+                    )}
+                    
+                    <div className="mt-8 text-sm text-gray-500 border-t pt-4">
+                        <p>Tip: When the external site opens, use their geolocation features or search fields to find meetings near you.</p>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- COMPONENT: Coping Cards (Updated) ---
+        const copingStrategies = [
+            { title: "Deep Breathing", description: "Inhale for 4s, hold for 7s, exhale for 8s. Repeat 3-5 times.", category: "Grounding", color: "from-blue-100 to-indigo-200", icon: MapPinIcon },
+            { title: "5-4-3-2-1 Method", description: "Name: 5 things you see, 4 you feel, 3 you hear, 2 you smell, 1 you taste.", category: "Grounding", color: "from-blue-100 to-indigo-200", icon: MapPinIcon },
+            { title: "Go for a Walk", description: "A 10-15 minute walk can change your scenery and mindset.", category: "Action", color: "from-green-100 to-emerald-200", icon: PhoneIcon },
+            { title: "Play the Tape Through", description: "Think about the full consequences of giving in to a craving.", category: "Cognitive", color: "from-pink-100 to-red-200", icon: ShieldIcon },
+            { title: "Call a Friend", description: "Talk about what you're feeling with your support network.", category: "Connection", color: "from-green-100 to-emerald-200", icon: PhoneIcon },
+            { title: "Delay and Distract", description: "Wait 15 minutes. Do something to distract yourself in that time.", category: "Cognitive", color: "from-pink-100 to-red-200", icon: ShieldIcon },
+        ];
+
+        const allCopingCards = copingStrategies;
+
+        const CopingCards = ({ onJournal }) => {
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const card = allCopingCards[currentIndex];
+            const maxIndex = allCopingCards.length - 1;
+
+            const showNextCard = () => {
+                setCurrentIndex((prevIndex) => (prevIndex + 1) % allCopingCards.length);
+            };
+
+            const showPreviousCard = () => {
+                setCurrentIndex((prevIndex) => (prevIndex - 1 + allCopingCards.length) % allCopingCards.length);
+            };
+
+            const CardIconComponent = card.icon;
+
+            return ( 
+                <div className="flex flex-col items-center justify-center h-full p-4 animate-fade-in"> 
+                    <div 
+                        className={`p-8 rounded-xl shadow-xl w-full max-w-md text-center flex-grow flex flex-col justify-between 
+                                   bg-gradient-to-br ${card.color} text-gray-900 border border-gray-100`}
+                    >
+                        <div className="flex justify-between items-start mb-4">
+                            <button onClick={showPreviousCard} className="text-gray-700 hover:text-black p-1 rounded-full bg-white/70 shadow-md">
+                                <ArrowLeftIcon />
+                            </button>
+                            <div className="flex flex-col items-center">
+                                <CardIconComponent className="w-8 h-8 text-teal-800 mb-2" />
+                                <p className="text-xs font-semibold uppercase tracking-wider text-teal-800">{card.category}</p>
+                            </div>
+                            <button onClick={showNextCard} className="text-gray-700 hover:text-black p-1 rounded-full bg-white/70 shadow-md">
+                                <ArrowLeftIcon style={{ transform: 'rotate(180deg)' }} />
+                            </button>
+                        </div>
+                        
+                        <div className="flex flex-col justify-center flex-grow">
+                            <h2 className="text-3xl font-bold text-teal-900 mb-4">{card.title}</h2>
+                            <p className="text-gray-800 text-lg">{card.description}</p>
+                        </div>
+
+                        <p className="text-xs text-gray-600 mt-4">Card {currentIndex + 1} of {allCopingCards.length}</p>
+
+                    </div> 
+                    
+                    <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full max-w-md"> 
+                        <button onClick={() => onJournal(card)} className="w-full bg-white text-teal-600 border-2 border-teal-600 font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-50 transition-colors">Journal on This</button>
+                    </div> 
+                </div> 
+            );
+        };
+
+        // --- COMPONENT: Recovery Literature (Unchanged) ---
+        const RecoveryLiterature = () => {
+            const [selectedBook, setSelectedBook] = useState(null); const [selectedChapter, setSelectedChapter] = useState(null);
+            const formatContent = (content) => content.split('\n\n').map((paragraph, index) => <p key={index} className="mb-4">{paragraph.trim()}</p>);
+            if (selectedChapter) { return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col"> <button onClick={() => setSelectedChapter(null)} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold flex-shrink-0"><ArrowLeftIcon /><span className="ml-2">Back to Chapters</span></button> <h2 className="text-2xl font-bold text-gray-800 mb-4 flex-shrink-0">{selectedChapter.title}</h2> <div className="prose-lg text-gray-700 overflow-y-auto flex-grow pr-2">{formatContent(selectedChapter.content)}</div> </div> ); }
+            if (selectedBook) { return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"> <button onClick={() => setSelectedBook(null)} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold"><ArrowLeftIcon /><span className="ml-2">Back to Library</span></button> <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold text-gray-800">{selectedBook.title}</h2><a href={selectedBook.pdfLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600"><DownloadIcon />PDF</a></div> <ul className="space-y-3">{selectedBook.chapters.map((chapter, index) => ( <li key={index}><button onClick={() => setSelectedChapter(chapter)} className="w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm"><h3 className="font-semibold text-gray-800">{chapter.title}</h3></button></li> ))}</ul> </div> ); }
+            return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"><h2 className="text-2xl font-bold text-gray-800 mb-2">Recovery Literature</h2><p className="text-gray-600 mb-6">Read or download foundational recovery texts.</p><ul className="space-y-4">{Object.keys(literatureData).map(key => { const book = literatureData[key]; return ( <li key={key} className="p-4 bg-gray-50 rounded-lg shadow-sm"><div className="flex justify-between items-start"><div><h3 className="font-semibold text-gray-800 text-lg">{book.title}</h3></div><a href={book.pdfLink} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 ml-4 flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 text-sm"><DownloadIcon />PDF</a></div><button onClick={() => setSelectedBook(book)} className="mt-4 w-full bg-teal-50 text-teal-700 font-semibold py-2 px-4 rounded-lg hover:bg-teal-100">Read in App</button></li> )})}</ul></div> );
+        };
+
+        // --- COMPONENT: Recovery Workbook (Updated with Detailed Questions) ---
+        const workbookData = {
+            generalRecovery: { title: "General Recovery Exercises", description: "Core exercises for your recovery.", topics: [ { id: 'understanding-addiction', title: 'Understanding My Addiction', prompt: 'Reflect on when your addiction started. What were the circumstances? How has it impacted your life, relationships, and health? Write openly about your journey with the substance or behavior.' }, { id: 'identifying-triggers', title: 'Identifying Triggers', prompt: 'What situations, feelings, people, or places make you want to use? List as many as you can. For each trigger, think about why it affects you and how you have reacted in the past.' }, { id: 'coping-strategies', title: 'Developing Coping Strategies', prompt: 'For each trigger you identified, brainstorm a healthy coping strategy. What can you do instead of turning to your addiction? Examples: call a sponsor, go for a walk, practice deep breathing, listen to music.' }, { id: 'building-support', title: 'Building a Support Network', prompt: 'Who are the supportive, trustworthy people in your life? List their names and how they can help. Who do you need to distance yourself from? How will you build new, healthy relationships?' }, { id: 'vision-for-future', title: 'My Vision for a Sober Future', prompt: 'Describe the life you want to live in recovery. What are your goals for your career, family, health, and personal growth? Be specific and imagine how good it will feel to achieve these things.' }, { id: 'relapse-prevention', title: 'Relapse Prevention Plan', prompt: 'Acknowledge that recovery is a process. What are your personal warning signs that you might be heading for a relapse? Create a step-by-step plan of action for what you will do if you feel an urge or craving.' } ] },
+            
+            twelveSteps: { 
+                title: "12-Step Workbook", 
+                description: "A guide to working the 12 Steps. Answer the questions for each section.", 
+                topics: [ 
+                    { 
+                        id: 'step-1', title: 'Step 1: Honesty', 
+                        quote: 'We admitted we were powerless over our addiction, that our lives had become unmanageable.',
+                        sections: [
+                            { title: "A. The Problem of Powerlessness", 
+                              questions: [ 
+                                "1. In your own words, what does 'powerlessness over addiction' mean today?", 
+                                "2. Describe three instances where you were completely unable to control your use once you started.",
+                                "3. What specific lies did you tell yourself or others about your ability to manage your addiction?",
+                                "4. In what ways did you try to control or minimize your addiction before coming to recovery?",
+                                "5. Write about the emotional impact of finally admitting defeat over your addiction."
+                              ]
+                            },
+                            { title: "B. The Result of Unmanageability", 
+                              questions: [
+                                "6. List three key areas of your life that have become unmanageable (e.g., finances, relationships, work).",
+                                "7. How has your addiction impacted your physical and mental health?",
+                                "8. Describe a major consequence of your addiction (legal, financial, personal) that you would never have accepted while clean/sober.",
+                                "9. How did unmanageability affect your sleep, diet, or hygiene?",
+                                "10. What illusion of control did you hold onto, even as your life fell apart?"
+                              ]
+                            },
+                            { title: "C. Acceptance and Surrender", 
+                              questions: [
+                                "11. What action are you willing to take today that you were unwilling to take before?",
+                                "12. What is the biggest fear you have about accepting the truth of Step 1?",
+                                "13. What is the relief that comes with final surrender?",
+                                "14. Write a brief statement of admission and surrender to carry with you throughout the day.",
+                                "15. In one word, how do you feel after honestly completing this Step?"
+                              ]
+                            }
+                        ]
+                    }, 
+                    { 
+                        id: 'step-2', title: 'Step 2: Hope', 
+                        quote: 'Came to believe that a Power greater than ourselves could restore us to sanity.',
+                        sections: [
+                            { title: "A. The Need for Restoration", 
+                              questions: [ 
+                                "1. In what ways do you feel or believe your thinking has been 'insane' during your addiction?", 
+                                "2. Describe a typical thought pattern that consistently led you back to using or destructive behavior.",
+                                "3. What is your understanding of the word 'sanity' in the context of recovery?",
+                                "4. What evidence do you have that sanity is beginning to return to your life?",
+                                "5. Where do you find yourself feeling most hopeless or skeptical right now?",
+                                "6. What does it mean to believe you need 'restoration' rather than just willpower?"
+                              ]
+                            },
+                            { title: "B. Defining a Higher Power", 
+                              questions: [
+                                "7. What characteristics would your ideal 'Power greater than yourself' possess (e.g., loving, guiding, honest)?",
+                                "8. What obstacles (fear, pride, past negative experiences) prevent you from believing in this Power?",
+                                "9. If you reject the idea of a religious God, what non-religious force or entity are you willing to place your hope in?",
+                                "10. Describe an experience where you felt guided, protected, or surprisingly lucky.",
+                                "11. How do you recognize the influence of a Power greater than yourself in your life today?"
+                              ]
+                            },
+                            { title: "C. The Role of Hope and Faith", 
+                              questions: [
+                                "12. What specific hope do you have for your life one year from now?",
+                                "13. How can you deliberately choose hope when doubt or cynicism creeps in?",
+                                "14. How does the recovery fellowship (AA/NA) represent a 'Power greater than yourself' to you?",
+                                "15. What is the difference between relying on this Power and relying on human power?"
+                              ]
+                            }
+                        ]
+                    },
+                    { 
+                        id: 'step-3', title: 'Step 3: Trust', 
+                        quote: 'Made a decision to turn our will and our lives over to the care of God as we understood Him.',
+                        sections: [
+                            { title: "A. Decision Making", 
+                              questions: [
+                                "1. What areas of your life are you still trying to control completely?",
+                                "2. How does fear influence your desire to maintain control?",
+                                "3. Write down the simple decision you made to turn your life over.",
+                                "4. Describe a time when following your own will led to pain or destruction.",
+                                "5. What is the difference between 'my will' and the 'care' of a Higher Power?"
+                              ]
+                            },
+                            { title: "B. Understanding Care", 
+                              questions: [
+                                "6. What does 'God as we understood Him' mean to you today?",
+                                "7. In practical terms, what daily actions show you are relying on your own will?",
+                                "8. In practical terms, what daily actions show you are relying on your Higher Power's care?",
+                                "9. If your Higher Power is loving, what specific relief does turning things over offer?",
+                                "10. How do you distinguish between taking responsible action and controlling the outcome?"
+                              ]
+                            },
+                            { title: "C. The Practice of Surrender", 
+                              questions: [
+                                "11. Write out the Step Three prayer and what each sentence means to you.",
+                                "12. What is the one specific thing you are struggling to turn over today?",
+                                "13. If you were truly trusting, how would your approach to that problem change?",
+                                "14. What are three simple things you can 'turn over' immediately after completing this Step?"
+                              ]
+                            }
+                        ]
+                    },
+                    { 
+                        id: 'step-4', title: 'Step 4: Truth', 
+                        quote: 'Made a searching and fearless moral inventory of ourselves.',
+                        sections: [
+                            { title: "A. Search and Fearlessness", 
+                              questions: [
+                                "1. What does it mean to be truly 'fearless' in this process?",
+                                "2. What are you most afraid of finding out about yourself?",
+                                "3. In what ways have you been dishonest with yourself in the past?",
+                                "4. What is the most difficult resentment to look at, and why?",
+                                "5. Describe a time when you projected your faults onto someone else."
+                              ]
+                            },
+                            { title: "B. Resentments and Harms", 
+                              questions: [
+                                "6. List five major resentments you hold, and identify what part of your self-esteem (pride, security, ambition) was injured by each one.",
+                                "7. Describe a specific incident where you were clearly in the wrong.",
+                                "8. What fears currently block your growth?",
+                                "9. How did your addiction fuel these character defects?",
+                                "10. What responsibilities did you avoid because of your addiction?"
+                              ]
+                            },
+                            { title: "C. Self-Examination", 
+                              questions: [
+                                "11. List 5 things you genuinely like about yourself.",
+                                "12. What role did sexual conduct or extreme self-neglect play in your past harms?",
+                                "13. If you could undo one wrong, which would be, and why?",
+                                "14. What truth about yourself is the hardest to accept?",
+                                "15. How does this inventory make Step 5 seem necessary?"
+                              ]
+                            }
+                        ]
+                    },
+                    { 
+                        id: 'step-5', title: 'Step 5: Integrity', 
+                        quote: 'Admitted to God, to ourselves, and to another human being the exact nature of our wrongs.',
+                        sections: [
+                            { title: "A. Admission to God and Self", 
+                              questions: [
+                                "1. What does the word 'exact' imply about the depth of this admission?",
+                                "2. How has taking the inventory (Step 4) changed your view of yourself?",
+                                "3. What is the value of admitting your wrongs to yourself?",
+                                "4. What lies have you finally stopped telling yourself?"
+                              ]
+                            },
+                            { title: "B. Admission to Another Human Being", 
+                              questions: [
+                                "5. Why is it necessary to admit your wrongs to another person?",
+                                "6. Who did you choose to share your inventory with, and why did you trust them?",
+                                "7. What was the most difficult part of your inventory to share?",
+                                "8. How did you feel physically and emotionally immediately after sharing?"
+                              ]
+                            },
+                            { title: "C. Freedom and Humility", 
+                              questions: [
+                                "9. What relief did you gain by breaking secrecy?",
+                                "10. How has this Step taught you humility?",
+                                "11. Describe a situation where keeping a secret used to control you.",
+                                "12. What advice would you give to a newcomer starting this Step?"
+                              ]
+                            }
+                        ]
+                    },
+                    { 
+                        id: 'step-6', title: 'Step 6: Willingness', 
+                        quote: 'Were entirely ready to have God remove all these defects of character.',
+                        sections: [
+                            { title: "A. Identifying Defects", 
+                              questions: [
+                                "1. List your top five most persistent character defects (e.g., pride, dishonesty, impatience).",
+                                "2. What defect is currently causing the most trouble in your life?",
+                                "3. Which defect are you LEAST willing to let go of, and why?",
+                                "4. Describe a moment when one of these defects caused you deep regret."
+                              ]
+                            },
+                            { title: "B. Readiness and Resistance", 
+                              questions: [
+                                "5. What does 'entirely ready' mean to you? Is it perfect willingness or an honest effort?",
+                                "6. What benefits do you still gain from holding onto one of your defects?",
+                                "7. Write about a time a defect brought you temporary pleasure, followed by long-term pain.",
+                                "8. If a defect were removed today, how would your daily routine change?"
+                              ]
+                            },
+                            { title: "C. Surrender of Self-Will", 
+                              questions: [
+                                "9. What is the difference between asking God to remove a defect (Step 7) and being ready (Step 6)?",
+                                "10. Describe one positive quality you can practice today to replace a defect you are willing to let go of.",
+                                "11. Write a brief statement of readiness, giving permission for change to occur.",
+                                "12. What action demonstrates your willingness today?"
+                              ]
+                            }
+                        ]
+                    },
+                    { 
+                        id: 'step-7', title: 'Step 7: Humility', 
+                        quote: 'Humbly asked Him to remove our shortcomings.',
+                        sections: [
+                            { title: "A. Understanding Humility", 
+                              questions: [
+                                "1. What is your understanding of humility (what it IS and IS NOT)?",
+                                "2. How does pride prevent you from asking for help?",
+                                "3. How has working the previous Steps prepared you for this moment of humility?",
+                                "4. How has being humble made you more effective in recovery?"
+                              ]
+                            },
+                            { title: "B. The Act of Asking", 
+                              questions: [
+                                "5. What does 'shortcomings' encompass for you?",
+                                "6. When you ask your Higher Power to remove them, what result are you expecting?",
+                                "7. Do you believe yourHigher Power has the power to remove them? Why or why robot?",
+                                "8. Describe the feeling of asking for help without demands or conditions."
+                              ]
+                            },
+                            { title: "C. Prayer and Action", 
+                              questions: [
+                                "9. Write out the Step Seven prayer in your own words.",
+                                "10. How can you practice humility immediately after this prayer?",
+                                "11. If a shortcoming wasn't immediately removed, what is your next sensible action?",
+                                "12. What character assets are beginning to emerge in your life as shortcomings fade?"
+                              ]
+                            }
+                        ]
+                    },
+                    { 
+                        id: 'step-8', title: 'Step 8: Responsibility', 
+                        quote: 'Made a list of all persons we had harmed, and became willing to make amends to them all.',
+                        sections: [
+                            { title: "A. Making the List", 
+                              questions: [
+                                "1. Who is the person you harmed the most, and why?",
+                                "2. List every person you can think of that you owe an amends to (be thorough).",
+                                "3. What category of harm (e.g., financial, emotional, physical) is most common on your list?",
+                                "4. What fear prevents you from making this list complete?",
+                                "5. Did you harm institutions or organizations? List them."
+                              ]
+                            },
+                            { title: "B. Willingness, Not Action", 
+                              questions: [
+                                "6. What is the difference between 'making the list' and 'being willing' to make amends?",
+                                "7. What does 'willingness' look like in your attitude toward the list?",
+                                "8. What harm did you do to yourself that needs an amends?",
+                                "9. Is there anyone on your list you feel deserves the harm? How are you letting go of that judgment?",
+                                "10. What feelings surface when you read the names of those you harmed?"
+                              ]
+                            },
+                            { title: "C. Consequences and Freedom", 
+                              questions: [
+                                "11. What consequences are you willing to accept from the people on your list?",
+                                "12. What is the freedom you hope to gain by completing this Step?",
+                                "13. How does this Step deepen your sense of responsibility for your actions?",
+                                "14. What does it mean to make an amends in thought and intention, even before the action?"
+                              ]
+                            }
+                        ]
+                    },
+                    { 
+                        id: 'step-9', title: 'Step 9: Amends', 
+                        quote: 'Made direct amends to such people wherever possible, except when to do so would injure them or others.',
+                        sections: [
+                            { title: "A. Defining Direct Amends", 
+                              questions: [
+                                "1. What is the difference between an apology and an amends?",
+                                "2. What does the promise 'wherever possible' mean for you?",
+                                "3. How will you prepare for each amends conversation (what will you say, what won't you say)?",
+                                "4. Describe the harm of making an amends that would 'injure them or others.'"
+                              ]
+                            },
+                            { title: "B. The Amends Process", 
+                              questions: [
+                                "5. Who is the first person you will make amends to, and what will the amends consist of?",
+                                "6. How will you handle a negative or unforgiving response from someone?",
+                                "7. What were the most important non-verbal parts of your amends (e.g., tone, body language)?",
+                                "8. How have you already made 'living amends' to people on your list?"
+                              ]
+                            },
+                            { title: "C. Results and Freedom", 
+                              questions: [
+                                "9. Describe a specific amends you have successfully completed and how you felt afterward.",
+                                "10. How has this Step taught you patience and timing?",
+                                "11. What amends do you owe yourself for self-neglect or abuse?",
+                                "12. How does your emotional honesty today serve as an ongoing amends?"
+                              ]
+                            }
+                        ]
+                    },
+                    { 
+                        id: 'step-10', title: 'Step 10: Awareness', 
+                        quote: 'Continued to take personal inventory and when we were wrong promptly admitted it.',
+                        sections: [
+                            { title: "A. Daily Inventory", 
+                              questions: [
+                                "1. Why is continuing inventory essential for staying clean/sober?",
+                                "2. What three questions do you ask yourself at the end of each day to take inventory?",
+                                "3. Describe a moment today where you felt fear, and what you did with that feeling.",
+                                "4. What recurring negative thought or emotion did you notice today?",
+                                "5. What new character asset did you practice today?"
+                              ]
+                            },
+                            { title: "B. Prompt Admission", 
+                              questions: [
+                                "6. What does 'promptly admitted it' mean? (How quickly is prompt?)",
+                                "7. Who is a safe person you can admit wrongs to daily?",
+                                "8. Describe a recent instance where you were wrong and admitted it.",
+                                "9. How does avoiding prompt admission lead to resentment?",
+                                "10. What is the freedom gained by quickly admitting when you are wrong?"
+                              ]
+                            },
+                            { title: "C. Practice and Growth", 
+                              questions: [
+                                "11. How will you make this Step a natural part of your daily life, not a chore?",
+                                "12. What action will you take tomorrow morning to prevent recurring mistakes from today's inventory?",
+                                "13. How does this Step help you avoid becoming complacent?",
+                                "14. Write a brief evening review of your day."
+                              ]
+                            }
+                        ]
+                    },
+                    { 
+                        id: 'step-11', title: 'Step 11: Connection', 
+                        quote: 'Sought through prayer and meditation to improve our conscious contact with God as we understood Him, praying only for knowledge of His will for us and the power to carry that out.',
+                        sections: [
+                            { title: "A. Improving Conscious Contact", 
+                              questions: [
+                                "1. How do you define 'conscious contact' with your Higher Power?",
+                                "2. What does a typical meditation or prayer session look like for you?",
+                                "3. What time of day is best for you to practice quiet reflection?",
+                                "4. What distracting thoughts or feelings interrupt your connection?",
+                                "5. Describe a moment when you felt truly connected."
+                              ]
+                            },
+                            { title: "B. Prayer for Guidance", 
+                              questions: [
+                                "6. What is the significance of praying 'only for knowledge of His will'?",
+                                "7. How do you recognize your Higher Power's will versus your own selfish desires?",
+                                "8. What does the 'power to carry that out' mean, and where does that power come from?",
+                                "9. Write a brief prayer asking for guidance for a specific challenge you face today.",
+                                "10. How has this Step helped you let go of demanding specific outcomes?"
+                              ]
+                            },
+                            { title: "C. Action and Outcome", 
+                              questions: [
+                                "11. What is one concrete action you will take today based on the guidance you received?",
+                                "12. What is the most fulfilling part of your spiritual practice?",
+                                "13. How has this Step affected your sense of peace and purpose?",
+                                "14. How can you carry this conscious contact into your challenging interactions today?"
+                              ]
+                            }
+                        ]
+                    },
+                    { 
+                        id: 'step-12', title: 'Step 12: Service', 
+                        quote: 'Having had a spiritual awakening as the result of these steps, we tried to carry this message to alcoholics, and to practice these principles in all our affairs.',
+                        sections: [
+                            { title: "A. Spiritual Awakening", 
+                              questions: [
+                                "1. Describe your spiritual awakening (it can be sudden or gradual).",
+                                "2. What is the evidence in your life that a spiritual change has occurred?",
+                                "3. How has your relationship with people and life changed since working the Steps?",
+                                "4. What is the most profound freedom you have experienced in recovery?"
+                              ]
+                            },
+                            { title: "B. Carrying the Message", 
+                              questions: [
+                                "5. How do you 'carry the message' to others who still suffer?",
+                                "6. Describe a specific act of service you performed this week.",
+                                "7. What is the difference between carrying the message and giving advice?",
+                                "8. Who is the ideal person for you to share your story with right now?",
+                                "9. What is your primary motivation for service?"
+                              ]
+                            },
+                            { title: "C. Practice in All Affairs", 
+                              questions: [
+                                "10. How do you apply the principles (Honesty, Hope, Trust) in your professional life?",
+                                "11. How do you apply them to your family or domestic life?",
+                                "12. What is your commitment to ongoing service and growth?",
+                                "13. Summarize the lasting impact that working the Twelve Steps has had on your existence."
+                              ]
+                            }
+                        ]
+                    },
+                ] 
+            }
+        };
+
+        const WorkbookQuestion = ({ questionText, questionKey }) => {
+            const [response, setResponse] = useState('');
+            const [saveStatus, setSaveStatus] = useState('');
+            const isInitialLoad = useRef(true);
+
+            // 1. Load Data Effect (Runs only when questionKey changes, i.e., when loading a new Step/Topic)
+            useEffect(() => {
+                const data = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
+                setResponse(data[questionKey] || '');
+                setSaveStatus('Initial Load');
+            }, [questionKey]);
+
+            // 2. Debounce Save Effect (Runs whenever response changes after initial load)
+            useEffect(() => {
+                // Skips saving on initial load, only runs when user types
+                if (isInitialLoad.current) {
+                    isInitialLoad.current = false;
+                    return;
+                }
+
+                setSaveStatus('Saving...');
+                
+                const delayDebounceFn = setTimeout(() => {
+                    try {
+                        const data = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
+                        const updatedData = { ...data, [questionKey]: response };
+                        LocalDataStore.save(LocalDataStore.KEYS.WORKBOOK, updatedData);
+                        setSaveStatus('Saved');
+                    } catch (error) {
+                        console.error("Error saving workbook response:", error);
+                        setSaveStatus('Error');
+                    }
+                }, 1500);
+
+                return () => clearTimeout(delayDebounceFn);
+            }, [response, questionKey]);
+
+            return (
+                <div className="mb-4 pb-2">
+                    <p className="workbook-question text-gray-800">{questionText}</p>
+                    <textarea 
+                        value={response} 
+                        onChange={(e) => setResponse(e.target.value)} 
+                        placeholder="Write your answer here..." 
+                        className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500 resize-y min-h-[100px] text-sm"
+                        rows="4"
+                    />
+                    <p className="text-right text-xs text-gray-500 mt-1 h-4">{saveStatus === 'Saved' ? 'Saved' : (saveStatus === 'Saving...' ? 'Saving...' : '\u00A0')}</p>
+                </div>
+            );
+        };
+        
+        const CollapsibleWorkbookSection = ({ section, stepId }) => {
+            const [isCollapsed, setIsCollapsed] = useState(true);
+            const contentRef = useRef(null);
+            
+            // Generate unique key prefix for questions in this section
+            const keyPrefix = `${stepId}-${section.title.charAt(0)}`; 
+            
+            // Effect to recalculate max-height when component mounts or expands
+            useEffect(() => {
+                if (!isCollapsed && contentRef.current) {
+                    // Force DOM recalculation to get actual scroll height
+                    contentRef.current.style.maxHeight = `${contentRef.current.scrollHeight}px`;
+                }
+            }, [isCollapsed]);
+
+            return (
+                <div className="mb-4 border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                    <button 
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        className={`w-full flex justify-between items-center p-4 font-bold text-lg transition-colors ${isCollapsed ? 'bg-gray-50 hover:bg-gray-100 text-gray-700' : 'bg-teal-500 text-white hover:bg-teal-600'}`}
+                    >
+                        {section.title}
+                        {isCollapsed ? <ChevronDown /> : <ChevronUp />}
+                    </button>
+                    
+                    <div 
+                        ref={contentRef}
+                        style={{
+                            maxHeight: isCollapsed ? '0' : '9999px', // Set a large height for smooth transition when opening
+                            transition: 'max-height 0.4s ease-in-out',
+                        }}
+                        className="overflow-hidden p-4 bg-white"
+                    >
+                        {section.questions.map((question, qIndex) => {
+                            const questionKey = `${keyPrefix}-${qIndex + 1}`;
+                            return (
+                                <WorkbookQuestion
+                                    key={questionKey}
+                                    questionText={question}
+                                    questionKey={questionKey}
+                                />
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        const WorkbookTopic = ({ topic, onBack }) => {
+            const [isLoading, setIsLoading] = useState(false); 
+            
+            if (isLoading) { return <div className="h-full flex items-center justify-center"><Spinner /></div>; }
+
+            return (
+                <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col">
+                    <button onClick={onBack} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold flex-shrink-0"><ArrowLeftIcon /><span className="ml-2">Back to Topics</span></button>
+                    
+                    <h3 className="2xl font-bold text-gray-800 mb-2">{topic.title}</h3>
+                    
+                    {topic.quote && (
+                        <div className="step-quote">
+                            {topic.quote}
+                        </div>
+                    )}
+
+                    <div className="overflow-y-auto flex-grow pr-2">
+                        {topic.sections ? (
+                            topic.sections.map((section, secIndex) => (
+                                <CollapsibleWorkbookSection 
+                                    key={secIndex} 
+                                    section={section} 
+                                    stepId={topic.id} 
+                                />
+                            ))
+                        ) : (
+                            // Fallback for General Topics
+                            <p className="text-gray-600 mb-6">{topic.prompt}</p> 
+                        )}
+                    </div>
+                </div>
+            );
+        };
+        
+        const WorkbookCategory = ({ category, onSelectTopic, onBack, completedTopicIds }) => (
+            <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in">
+                <button onClick={onBack} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold"><ArrowLeftIcon /><span className="ml-2">Back to Workbook Sections</span></button>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">{category.title}</h2>
+                <p className="text-gray-600 mb-6">{category.description}</p>
+                <ul className="space-y-3">
+                    {category.topics.map(topic => (
+                        <li key={topic.id}>
+                            <button onClick={() => onSelectTopic(topic)} className="w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 flex items-center justify-between">
+                                <h3 className="font-semibold text-gray-800">{topic.title}</h3>
+                                {completedTopicIds.includes(topic.id) && <CheckCircleIcon className="text-green-500"/>}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
+
+        const RecoveryWorkbook = () => {
+            const [activeCategory, setActiveCategory] = useState(null); 
+            const [selectedTopic, setSelectedTopic] = useState(null); 
+            const [workbookResponses, setWorkbookResponses] = useState({});
+
+            // Load and listen for changes in workbook responses
+            useEffect(() => {
+                const loadedData = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
+                setWorkbookResponses(loadedData);
+                
+                const handleStorageChange = (e) => {
+                    if (e.key === LocalDataStore.KEYS.WORKBOOK) {
+                        setWorkbookResponses(LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {});
+                    }
+                };
+                window.addEventListener('storage', handleStorageChange);
+                return () => window.removeEventListener('storage', handleStorageChange);
+            }, []);
+
+            const completedTopicIds = useMemo(() => {
+                const completed = new Set();
+                
+                // 1. Check General Recovery Topics
+                workbookData.generalRecovery.topics.forEach(topic => {
+                    if (workbookResponses[topic.id] && workbookResponses[topic.id].trim().length > 0) {
                         completed.add(topic.id);
                     }
                 });
-            }
-        });
 
-        return Array.from(completed);
-
-    }, [workbookResponses]);
-
-    const calculateCompletion = useCallback((key) => {
-        const topics = workbookData[key]?.topics || [];
-        const completed = topics.filter(t => completedTopicIds.includes(t.id)).length;
-        const total = topics.length;
-        return { completed, total, percentage: total > 0 ? Math.round((completed / total) * 100) : 0 };
-    }, [completedTopicIds]);
-
-    const overallCompletion = useMemo(() => {
-        const allTopics = Object.values(workbookData).flatMap(c => c.topics);
-        const completed = allTopics.filter(t => completedTopicIds.includes(t.id)).length;
-        const total = allTopics.length;
-        return { completed, total, percentage: total > 0 ? Math.round((completed / total) * 100) : 0 };
-    }, [completedTopicIds]);
-    
-    if (selectedTopic && selectedTopic.sections) return React.createElement(WorkbookTopic, { topic: selectedTopic, onBack: () => setSelectedTopic(null) });
-    if (selectedTopic) return React.createElement(WorkbookTopic, { topic: selectedTopic, onBack: () => setSelectedTopic(null) });
-    if (activeCategory) return React.createElement(WorkbookCategory, { category: activeCategory, onSelectTopic: setSelectedTopic, onBack: () => setActiveCategory(null), completedTopicIds: completedTopicIds });
-    
-    return ( React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in" }, React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-2" }, "Recovery Workbook"), React.createElement("p", { className: "text-gray-600 mb-6" }, "Track your progress."), React.createElement("div", { className: "mb-6" }, React.createElement("div", { className: "flex justify-between items-center mb-1" }, React.createElement("span", { className: "text-sm font-semibold text-gray-600" }, "Overall Progress"), React.createElement("span", { className: "text-sm font-semibold text-teal-600" }, overallCompletion.percentage, "%")), React.createElement("div", { className: "w-full bg-gray-200 rounded-full h-2.5" }, React.createElement("div", { className: "bg-teal-500 h-2.5 rounded-full", style: { width: `${overallCompletion.percentage}%` } }))), React.createElement("ul", { className: "space-y-4" }, Object.keys(workbookData).map(key => { const category = workbookData[key]; if (!category) return null; const { completed, total, percentage } = calculateCompletion(key); return ( React.createElement("li", { key: key }, React.createElement("button", { onClick: () => setActiveCategory(category), className: "w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm" }, React.createElement("h3", { className: "font-semibold text-gray-800 text-lg" }, category.title), React.createElement("p", { className: "text-gray-600 mt-1 text-sm" }, category.description), React.createElement("div", { className: "mt-3" }, React.createElement("div", { className: "flex justify-between items-center mb-1" }, React.createElement("span", { className: "text-xs font-semibold text-gray-500" }, completed, " / ", total, " Completed"), React.createElement("span", { className: "text-xs font-semibold text-teal-600" }, percentage, "%")), React.createElement("div", { className: "w-full bg-gray-200 rounded-full h-1.5" }, React.createElement("div", { className: "bg-teal-500 h-1.5 rounded-full", style: { width: `${percentage}%` } })))))); }))) );
-};
-
-// --- COMPONENT: Page Footer (JSX converted to React.createElement for module compatibility) ---
-const PageFooter = ({ activeView }) => {
-    const getVersion = () => {
-        const key = activeView.toUpperCase();
-        let componentName = activeView.charAt(0).toUpperCase() + activeView.slice(1);
-        let version = APP_VERSIONS[key] || APP_VERSIONS.DASHBOARD;
-        
-        if (key === 'DASHBOARD') componentName = "App Core";
-        if (key === 'WORKBOOK') componentName = "Workbook";
-        if (key === 'LITERATURE') componentName = "Literature";
-        if (key === 'SETTINGS') componentName = "Settings";
-
-        return { componentName, version };
-    };
-    
-    const { componentName, version } = getVersion();
-
-    return (
-        React.createElement("footer", { className: "w-full max-w-2xl mx-auto flex-shrink-0 text-center py-2 text-xs text-gray-400 border-t border-gray-200 mt-2" },
-            "Version: ",
-            componentName,
-            " v",
-            version
-        )
-    );
-};
-
-
-// --- COMPONENT: App (Main Component) ---
-const App = () => {
-    const { isAuthLoading } = useAuth();
-    const [activeView, setActiveView] = useState('dashboard');
-    const [sobrietyStartDate, setSobrietyStartDate] = useState(null);
-    const [isDataLoading, setIsDataLoading] = useState(true);
-    const [journalTemplate, setJournalTemplate] = useState('');
-
-    useEffect(() => {
-        const storedDate = LocalDataStore.load(LocalDataStore.KEYS.SOBRIETY);
-        if (storedDate) {
-            setSobrietyStartDate(new Date(storedDate));
-        }
-        setIsDataLoading(false);
-    }, []);
-
-    const handleJournalFromCopingCard = (card) => {
-        const template = `Coping Card Reflection: "${card.title}"\n\n**Strategy:** ${card.description}\n\n**My Application Plan:** (How will I use this skill the next time I have a craving?)\n\n`;
-        setJournalTemplate(template);
-        setActiveView('journal');
-    };
-    
-    const handleSobrietyDateUpdate = (newDate, journal) => {
-        const newDateString = newDate.toISOString();
-        LocalDataStore.save(LocalDataStore.KEYS.SOBRIETY, newDateString);
-        setSobrietyStartDate(newDate);
-
-        if (journal) {
-            const template = `Sobriety Date Change Reflection (${new Date().toLocaleDateString()}):\n\n**Previous Date:** ${sobrietyStartDate.toLocaleDateString()}\n**New Date:** ${newDate.toLocaleDateString()}\n\nI am changing my date because:\n\nThis decision is important because:`;
-            setJournalTemplate(template);
-            setActiveView('journal');
-        } else {
-            setActiveView('dashboard');
-        }
-    };
-
-    const renderContent = () => {
-        if (isAuthLoading || isDataLoading) return React.createElement("div", { className: "h-full flex items-center justify-center" }, React.createElement(Spinner, null));
-        
-        if (!sobrietyStartDate) return React.createElement(SobrietyDataSetup, { onDateSet: setSobrietyStartDate });
-        
-        if (sobrietyStartDate) {
-            switch (activeView) {
-                case 'dashboard': return React.createElement(Dashboard, { onNavigate: setActiveView, sobrietyStartDate: sobrietyStartDate });
-                case 'journal': return React.createElement(DailyJournal, { journalTemplate: journalTemplate, setJournalTemplate: setJournalTemplate });
-                case 'goals': return React.createElement(Goals, null);
-                case 'coping': return React.createElement(CopingCards, { onJournal: handleJournalFromCopingCard });
-                case 'workbook': return React.createElement(RecoveryWorkbook, null);
-                case 'literature': return React.createElement(RecoveryLiterature, null);
-                case 'resources': return React.createElement(Resources, null);
-                case 'settings': return React.createElement(Settings, { 
-                    currentStartDate: sobrietyStartDate, 
-                    handleSobrietyDateUpdate: handleSobrietyDateUpdate,
-                    onBack: () => setActiveView('dashboard')
+                // 2. Check 12-Step Topics
+                workbookData.twelveSteps.topics.forEach(step => {
+                    let stepHasContent = false;
+                    step.sections.forEach(section => {
+                        section.questions.forEach((_, index) => {
+                            const key = `${step.id}-${section.title.charAt(0)}-${index + 1}`;
+                            if (workbookResponses[key] && workbookResponses[key].trim().length > 0) {
+                                stepHasContent = true;
+                            }
+                        });
+                    });
+                    if (stepHasContent) {
+                        completed.add(step.id);
+                    }
                 });
-                case 'finder': return React.createElement(MeetingFinder, null);
-                default: return React.createElement(Dashboard, { onNavigate: setActiveView, sobrietyStartDate: sobrietyStartDate });
-            }
-        }
-    };
-    
-    const headerTitle = useMemo(() => {
-        const titles = { dashboard: "The Addict's Agenda", coping: "Coping Cards", literature: "Recovery Literature", journal: "Daily Journal", goals: "My Goals", workbook: "Recovery Workbook", resources: "S.O.S. Resources", settings: "Settings", finder: "Meeting Finder" };
-        return titles[activeView] || "Recovery";
-    }, [activeView]);
 
-    return (
-        React.createElement("div", { className: "bg-gray-100 h-screen w-full flex flex-col font-sans text-gray-800 p-2 sm:p-4" },
-            React.createElement("div", { className: "flex-shrink-0 w-full max-w-2xl mx-auto" },
-                React.createElement("header", { className: "flex items-center justify-between p-4" },
-                    /* 1. Left Side: Back Button or Spacer */
-                    activeView !== 'dashboard' && activeView !== 'settings' && sobrietyStartDate ? (
-                        React.createElement("button", { onClick: () => setActiveView('dashboard'), className: "text-teal-600 hover:text-teal-800 p-2 -ml-2" }, React.createElement(ArrowLeftIcon, null))
-                    ) : React.createElement("div", { className: "w-10" }),
-                    
-                    React.createElement("h1", { className: "text-xl font-bold text-gray-700" }, headerTitle),
-                    
-                    /* 2. Right Side: Settings Cog or Spacer */
-                    activeView === 'dashboard' && sobrietyStartDate ? (
-                        React.createElement("button", { onClick: () => setActiveView('settings'), className: "text-gray-500 hover:text-teal-600 p-1" },
-                            React.createElement(SettingsIcon, null)
-                        )
-                    ) : React.createElement("div", { className: "w-10" })
-                    
-                )
-            ),
-            React.createElement("main", { className: "flex-grow w-full max-w-2xl mx-auto overflow-y-auto pb-4" },
-                renderContent()
-            ),
-            sobrietyStartDate && React.createElement(PageFooter, { activeView: activeView })
-        )
-    );
-};
+                return Array.from(completed);
 
-// Initialize and render the App component
-const container = document.getElementById('root');
-const root = ReactDOM.createRoot(container);
-root.render(React.createElement(App, null));
+            }, [workbookResponses]);
+
+            const calculateCompletion = useCallback((key) => {
+                const topics = workbookData[key].topics;
+                const completed = topics.filter(t => completedTopicIds.includes(t.id)).length;
+                const total = topics.length;
+                return { completed, total, percentage: total > 0 ? Math.round((completed / total) * 100) : 0 };
+            }, [completedTopicIds]);
+
+            const overallCompletion = useMemo(() => {
+                const allTopics = Object.values(workbookData).flatMap(c => c.topics);
+                const completed = allTopics.filter(t => completedTopicIds.includes(t.id)).length;
+                const total = allTopics.length;
+                return { completed, total, percentage: total > 0 ? Math.round((completed / total) * 100) : 0 };
+            }, [completedTopicIds]);
+            
+            if (selectedTopic && selectedTopic.sections) return <WorkbookTopic topic={selectedTopic} onBack={() => setSelectedTopic(null)} />;
+            if (selectedTopic) return <WorkbookTopic topic={selectedTopic} onBack={() => setSelectedTopic(null)} />;
+            if (activeCategory) return <WorkbookCategory category={activeCategory} onSelectTopic={setSelectedTopic} onBack={() => setActiveCategory(null)} completedTopicIds={completedTopicIds} />;
+            
+            return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"> <h2 className="text-2xl font-bold text-gray-800 mb-2">Recovery Workbook</h2> <p className="text-gray-600 mb-6">Track your progress.</p> <div className="mb-6"> <div className="flex justify-between items-center mb-1"> <span className="text-sm font-semibold text-gray-600">Overall Progress</span> <span className="text-sm font-semibold text-teal-600">{overallCompletion.percentage}%</span> </div> <div className="w-full bg-gray-200 rounded-full h-2.5"><div className="bg-teal-500 h-2.5 rounded-full" style={{ width: `${overallCompletion.percentage}%` }}></div></div> </div> <ul className="space-y-4"> {Object.keys(workbookData).map(key => { const { completed, total, percentage } = calculateCompletion(key); return ( <li key={key}> <button onClick={() => setActiveCategory(workbookData[key])} className="w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm"> <h3 className="font-semibold text-gray-800 text-lg">{workbookData[key].title}</h3> <p className="text-gray-600 mt-1 text-sm">{workbookData[key].description}</p> <div className="mt-3"> <div className="flex justify-between items-center mb-1"> <span className="text-xs font-semibold text-gray-500">{completed} / {total} Completed</span> <span className="text-xs font-semibold text-teal-600">{percentage}%</span> </div> <div className="w-full bg-gray-200 rounded-full h-1.5"><div className="bg-teal-500 h-1.5 rounded-full" style={{ width: `${percentage}%` }}></div></div> </div> </button> </li> ); })} </ul> </div> );
+        };
+
+        // --- COMPONENT: Page Footer ---
+        const PageFooter = ({ activeView }) => {
+            const getVersion = () => {
+                // Map activeView string to the uppercase key in APP_VERSIONS
+                const key = activeView.toUpperCase();
+                let componentName = activeView.charAt(0).toUpperCase() + activeView.slice(1);
+                let version = APP_VERSIONS[key] || APP_VERSIONS.DASHBOARD;
+                
+                if (key === 'DASHBOARD') componentName = "App Core";
+                if (key === 'WORKBOOK') componentName = "Workbook";
+                if (key === 'LITERATURE') componentName = "Literature";
+                if (key === 'SETTINGS') componentName = "Settings";
+
+                return { componentName, version };
+            };
+            
+            const { componentName, version } = getVersion();
+
+            return (
+                <footer className="w-full max-w-2xl mx-auto flex-shrink-0 text-center py-2 text-xs text-gray-400 border-t border-gray-200 mt-2">
+                    Version: {componentName} v{version}
+                </footer>
+            );
+        };
+
+
+        // --- COMPONENT: App (Main Component) ---
+        const App = () => {
+            const { isAuthLoading } = useAuth();
+            const [activeView, setActiveView] = useState('dashboard');
+            const [sobrietyStartDate, setSobrietyStartDate] = useState(null);
+            const [isDataLoading, setIsDataLoading] = useState(true);
+            const [journalTemplate, setJournalTemplate] = useState('');
+
+            // Load sobriety date from localStorage on mount
+            useEffect(() => {
+                const storedDate = LocalDataStore.load(LocalDataStore.KEYS.SOBRIETY);
+                if (storedDate) {
+                    setSobrietyStartDate(new Date(storedDate));
+                }
+                setIsDataLoading(false);
+            }, []);
+
+            const handleJournalFromCopingCard = (card) => {
+                const template = `Coping Card Reflection: "${card.title}"\n\n**Strategy:** ${card.description}\n\n**My Application Plan:** (How will I use this skill the next time I have a craving?)\n\n`;
+                setJournalTemplate(template);
+                setActiveView('journal');
+            };
+            
+            const handleSobrietyDateUpdate = (newDate, journal) => {
+                const newDateString = newDate.toISOString();
+                LocalDataStore.save(LocalDataStore.KEYS.SOBRIETY, newDateString);
+                setSobrietyStartDate(newDate);
+
+                if (journal) {
+                    const template = `Sobriety Date Change Reflection (${new Date().toLocaleDateString()}):\n\n**Previous Date:** ${sobrietyStartDate.toLocaleDateString()}\n**New Date:** ${newDate.toLocaleDateString()}\n\nI am changing my date because:\n\nThis decision is important because:`;
+                    setJournalTemplate(template);
+                    setActiveView('journal');
+                } else {
+                    setActiveView('dashboard');
+                }
+            };
+
+            const renderContent = () => {
+                if (isAuthLoading || isDataLoading) return <div className="h-full flex items-center justify-center"><Spinner /></div>;
+                
+                if (!sobrietyStartDate) return <SobrietyDataSetup onDateSet={setSobrietyStartDate} />;
+                
+                if (sobrietyStartDate) {
+                    switch (activeView) {
+                        case 'dashboard': return <Dashboard onNavigate={setActiveView} sobrietyStartDate={sobrietyStartDate} />;
+                        case 'journal': return <DailyJournal journalTemplate={journalTemplate} setJournalTemplate={setJournalTemplate} />;
+                        case 'goals': return <Goals />;
+                        case 'coping': return <CopingCards onJournal={handleJournalFromCopingCard} />;
+                        case 'workbook': return <RecoveryWorkbook />;
+                        case 'literature': return <RecoveryLiterature />;
+                        case 'resources': return <Resources />;
+                        case 'settings': return <Settings 
+                            currentStartDate={sobrietyStartDate} 
+                            handleSobrietyDateUpdate={handleSobrietyDateUpdate}
+                            onBack={() => setActiveView('dashboard')}
+                        />;
+                        case 'finder': return <MeetingFinder />;
+                        default: return <Dashboard onNavigate={setActiveView} sobrietyStartDate={sobrietyStartDate} />;
+                    }
+                }
+            };
+            
+            const headerTitle = useMemo(() => {
+                const titles = { dashboard: "The Addict's Agenda", coping: "Coping Cards", literature: "Recovery Literature", journal: "Daily Journal", goals: "My Goals", workbook: "Recovery Workbook", resources: "S.O.S. Resources", settings: "Settings", finder: "Meeting Finder" };
+                return titles[activeView] || "Recovery";
+            }, [activeView]);
+
+            return (
+                <div className="bg-gray-100 h-screen w-full flex flex-col font-sans text-gray-800 p-2 sm:p-4">
+                    <div className="flex-shrink-0 w-full max-w-2xl mx-auto">
+                        <header className="flex items-center justify-between p-4">
+                            {/* 1. Left Side: Back Button or Spacer */}
+                            {activeView !== 'dashboard' && activeView !== 'settings' && sobrietyStartDate ? (
+                                <button onClick={() => setActiveView('dashboard')} className="text-teal-600 hover:text-teal-800 p-2 -ml-2"><ArrowLeftIcon /></button>
+                            ) : <div className="w-10"></div>}
+                            
+                            <h1 className="text-xl font-bold text-gray-700">{headerTitle}</h1>
+                            
+                            {/* 2. Right Side: Settings Cog or Spacer */}
+                            {activeView === 'dashboard' && sobrietyStartDate ? (
+                                <button onClick={() => setActiveView('settings')} className="text-gray-500 hover:text-teal-600 p-1">
+                                    <SettingsIcon />
+                                </button>
+                            ) : <div className="w-10"></div>}
+                            
+                        </header>
+                    </div>
+                    <main className="flex-grow w-full max-w-2xl mx-auto overflow-y-auto pb-4">
+                        {renderContent()}
+                    </main>
+                    {sobrietyStartDate && <PageFooter activeView={activeView} />}
+                </div>
+            );
+        };
+
+        // Initialize and render the App component
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>
