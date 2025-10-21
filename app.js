@@ -2,9 +2,10 @@ import {
     APP_VERSIONS, 
     RECOVERY_FACTS, 
     literatureData, 
-    journalTemplates as exportedJournalTemplates, // Rename to avoid conflict
+    journalTemplates as exportedJournalTemplates,
     copingStrategies, 
-    MEETING_LINKS 
+    MEETING_LINKS,
+    workbookData 
 } from './data.js';
 
 import { 
@@ -14,9 +15,10 @@ import {
     MapPinIcon, PhoneIcon, XIcon, FileTextIcon 
 } from './icons.js';
 
-// FIX: Explicitly access React from the global scope when running as a module.
-// In a non-module <script> tag, React is globally defined. In a module, we must define it here.
+// CRITICAL FIX: Explicitly access React and ReactDOM from the global scope 
+// where the CDN scripts loaded them.
 const React = window.React;
+const ReactDOM = window.ReactDOM;
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
 // Re-assigning journalTemplates to maintain structure clarity in this file
@@ -30,7 +32,7 @@ const iconMap = {
 };
 const allCopingCards = copingStrategies.map(card => ({
     ...card,
-    icon: iconMap[card.icon] || ShieldIcon // Default to ShieldIcon if not found
+    icon: iconMap[card.icon] || ShieldIcon
 }));
 
 
@@ -52,6 +54,7 @@ const LocalDataStore = {
             if (key === LocalDataStore.KEYS.WELCOME_TIP) {
                 return serializedData === 'true';
             }
+            // For JSON data (Arrays/Objects)
             return serializedData === null ? [] : JSON.parse(serializedData);
         } catch (error) {
             console.error(`Error loading data from localStorage for key ${key}:`, error);
@@ -60,8 +63,7 @@ const LocalDataStore = {
     },
     save: (key, data) => {
         try {
-            const dataToStore = key === LocalDataStore.KEYS.SOBRIETY || key === LocalDataStore.KEYS.WELCOME_TIP
-                ? data : JSON.stringify(data);
+            const dataToStore = JSON.stringify(data);
             localStorage.setItem(key, dataToStore);
         } catch (error) {
             console.error(`Error saving data to localStorage for key ${key}:`, error);
@@ -71,13 +73,15 @@ const LocalDataStore = {
     loadAll: () => {
         const allData = {};
         for (const key in LocalDataStore.KEYS) {
+            // Exclude the WELCOME_TIP flag from the data export
             if (LocalDataStore.KEYS[key] !== LocalDataStore.KEYS.WELCOME_TIP) {
                  const rawData = localStorage.getItem(LocalDataStore.KEYS[key]);
                  if (rawData) {
-                     // Try to parse if it's not the raw sobriety date string
+                     // Try to parse if it's JSON data
                      try {
                          allData[LocalDataStore.KEYS[key]] = JSON.parse(rawData);
                      } catch {
+                         // Fallback for raw strings (like the sobriety date)
                          allData[LocalDataStore.KEYS[key]] = rawData;
                      }
                  }
@@ -103,8 +107,8 @@ const SobrietyDataSetup = ({ onDateSet }) => {
     const handleSave = () => {
         const newStartDate = new Date(date);
         LocalDataStore.save(LocalDataStore.KEYS.SOBRIETY, newStartDate.toISOString());
-        // Set the welcome tip to be visible for new users
-        LocalDataStore.save(LocalDataStore.KEYS.WELCOME_TIP, 'false');
+        // Set the welcome tip to be visible for new users (false means NOT dismissed)
+        LocalDataStore.save(LocalDataStore.KEYS.WELCOME_TIP, false); 
         onDateSet(newStartDate);
     };
     return ( React.createElement("div", { className: "flex flex-col items-center justify-center h-full p-6 bg-gray-50 rounded-xl shadow-lg animate-fade-in" }, React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-2" }, "Welcome"), React.createElement("p", { className: "text-gray-600 mb-6 text-center" }, "Let's start your journey. Please select your sobriety start date."), React.createElement("input", { type: "date", value: date, onChange: (e) => setDate(e.target.value), className: "w-full max-w-xs p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500" }), React.createElement("button", { onClick: handleSave, className: "mt-6 bg-teal-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-700 transition-transform transform hover:scale-105" }, "Begin Journey")) );
@@ -127,7 +131,7 @@ const WelcomeTip = ({ onDismiss }) => {
     return (
         React.createElement("div", { className: "p-4 bg-blue-100 border border-blue-300 rounded-xl shadow-md flex justify-between items-start mb-6" },
             React.createElement("div", { className: "flex-grow pr-4" },
-                React.createElement("p", { className: "font-bold text-blue-800 mb-1" }, "Welcome to Recovery"),
+                React.createElement("p", { className: "font-bold text-blue-800 mb-1" }, "Welcome Tip: Recovery Jargon"),
                 React.createElement("p", { className: "text-sm text-blue-700" }, "You'll see terms like ", React.createElement("strong", null, "HALT"), " (Hungry, Angry, Lonely, Tired) and ", React.createElement("strong", null, "Inventory"), " (self-reflection). Don't worry if they're new\u2014the Workbook and Journal are here to guide you.")
             ),
             React.createElement("button", { 
@@ -152,7 +156,7 @@ const Dashboard = ({ onNavigate, sobrietyStartDate }) => {
     const [isTipDismissed, setIsTipDismissed] = useState(LocalDataStore.load(LocalDataStore.KEYS.WELCOME_TIP));
 
     const handleDismissTip = () => {
-        LocalDataStore.save(LocalDataStore.KEYS.WELCOME_TIP, 'true');
+        LocalDataStore.save(LocalDataStore.KEYS.WELCOME_TIP, true);
         setIsTipDismissed(true);
     };
 
@@ -533,8 +537,8 @@ const createListModule = (config) => {
                     value: newItem,
                     onChange: setNewItem,
                     placeholder: config.placeholder,
-                    isInput: false, // Allow textarea for multi-line goals
-                    rows: "2"
+                    isInput: false, 
+                    rows: "2" // Use textarea for flexible goal entries
                 }),
                 React.createElement("button", { type: "submit", className: "flex-shrink-0 bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 transition-colors" }, "Add")
             )
@@ -661,64 +665,32 @@ const MeetingFinder = () => {
     );
 };
 
-// --- COMPONENT: Coping Cards (JSX converted to React.createElement for module compatibility) ---
-const CopingCards = ({ onJournal }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const card = allCopingCards[currentIndex];
-    const maxIndex = allCopingCards.length - 1;
+// --- Recovery Literature (Placeholder for brevity, full logic uses the literatureData structure from data.js) ---
+const RecoveryLiterature = () => {
+    const [selectedBook, setSelectedBook] = useState(null); const [selectedChapter, setSelectedChapter] = useState(null);
+    const formatContent = (content) => content.split('\n\n').map((paragraph, index) => React.createElement("p", { key: index, className: "mb-4" }, paragraph.trim()));
 
-    const showNextCard = () => {
-        setCurrentIndex((prevIndex) => (prevIndex + 1) % allCopingCards.length);
-    };
-
-    const showPreviousCard = () => {
-        setCurrentIndex((prevIndex) => (prevIndex - 1 + allCopingCards.length) % allCopingCards.length);
-    };
-
-    const CardIconComponent = card.icon;
-
-    return ( 
-        React.createElement("div", { className: "flex flex-col items-center justify-center h-full p-4 animate-fade-in" }, 
-            React.createElement("div", { 
-                className: `p-8 rounded-xl shadow-xl w-full max-w-md text-center flex-grow flex flex-col justify-between 
-                           bg-gradient-to-br ${card.color} text-gray-900 border border-gray-100`
-            },
-                React.createElement("div", { className: "flex justify-between items-start mb-4" },
-                    React.createElement("button", { onClick: showPreviousCard, className: "text-gray-700 hover:text-black p-1 rounded-full bg-white/70 shadow-md" },
-                        React.createElement(ArrowLeftIcon, null)
-                    ),
-                    React.createElement("div", { className: "flex flex-col items-center" },
-                        React.createElement(CardIconComponent, { className: "w-8 h-8 text-teal-800 mb-2" }),
-                        React.createElement("p", { className: "text-xs font-semibold uppercase tracking-wider text-teal-800" }, card.category)
-                    ),
-                    React.createElement("button", { onClick: showNextCard, className: "text-gray-700 hover:text-black p-1 rounded-full bg-white/70 shadow-md" },
-                        React.createElement(ArrowLeftIcon, { style: { transform: 'rotate(180deg)' } })
-                    )
-                ),
-                
-                React.createElement("div", { className: "flex flex-col justify-center flex-grow" },
-                    React.createElement("h2", { className: "text-3xl font-bold text-teal-900 mb-4" }, card.title),
-                    React.createElement("p", { className: "text-gray-800 text-lg" }, card.description)
-                ),
-
-                React.createElement("p", { className: "text-xs text-gray-600 mt-4" }, "Card ", currentIndex + 1, " of ", allCopingCards.length)
-            ), 
-            
-            React.createElement("div", { className: "flex flex-col sm:flex-row gap-4 mt-6 w-full max-w-md" }, 
-                React.createElement("button", { onClick: () => onJournal(card), className: "w-full bg-white text-teal-600 border-2 border-teal-600 font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-50 transition-colors" }, "Journal on This")
+    if (selectedChapter) { 
+        return ( 
+            React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col" }, 
+                React.createElement("button", { onClick: () => setSelectedChapter(null), className: "flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold flex-shrink-0" }, React.createElement(ArrowLeftIcon, null), React.createElement("span", { className: "ml-2" }, "Back to Chapters")), 
+                React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-4 flex-shrink-0" }, selectedChapter.title), 
+                React.createElement("div", { className: "prose-lg text-gray-700 overflow-y-auto flex-grow pr-2" }, formatContent(selectedChapter.content))
             ) 
-        ) 
-    );
-};
-
-// --- WORKBOOK (Placeholder for brevity, full logic uses the workbookData structure from data.js) ---
-const workbookData = {
-    generalRecovery: { title: "General Recovery Exercises", description: "Core exercises for your recovery.", topics: [{ id: 'understanding-addiction', title: 'Understanding My Addiction', prompt: 'Reflect...' }] },
-    twelveSteps: { 
-        title: "12-Step Workbook", 
-        description: "A guide to working the 12 Steps...", 
-        topics: [ { id: 'step-1', title: 'Step 1: Honesty', quote: 'We admitted we were powerless...', sections: [{ title: "A. The Problem of Powerlessness", questions: ["1. In your own words..."] }] } ] 
+        ); 
     }
+    if (selectedBook) { 
+        return ( 
+            React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in" }, 
+                React.createElement("button", { onClick: () => setSelectedBook(null), className: "flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold" }, React.createElement(ArrowLeftIcon, null), React.createElement("span", { className: "ml-2" }, "Back to Library")), 
+                React.createElement("div", { className: "flex justify-between items-center mb-6" }, React.createElement("h2", { className: "text-2xl font-bold text-gray-800" }, selectedBook.title), React.createElement("a", { href: selectedBook.pdfLink, target: "_blank", rel: "noopener noreferrer", className: "flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600" }, React.createElement(DownloadIcon, null), "PDF")), 
+                React.createElement("ul", { className: "space-y-3" }, selectedBook.chapters.map((chapter, index) => ( React.createElement("li", { key: index }, React.createElement("button", { onClick: () => setSelectedChapter(chapter), className: "w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm" }, React.createElement("h3", { className: "font-semibold text-gray-800" }, chapter.title)))))
+            ) 
+        ); 
+    }
+    return ( 
+        React.createElement("div", { className: "bg-white p-6 rounded-xl shadow-lg animate-fade-in" }, React.createElement("h2", { className: "text-2xl font-bold text-gray-800 mb-2" }, "Recovery Literature"), React.createElement("p", { className: "text-gray-600 mb-6" }, "Read or download foundational recovery texts."), React.createElement("ul", { className: "space-y-4" }, Object.keys(literatureData).map(key => { const book = literatureData[key]; return ( React.createElement("li", { key: key }, React.createElement("div", { className: "p-4 bg-gray-50 rounded-lg shadow-sm" }, React.createElement("div", { className: "flex justify-between items-start" }, React.createElement("div", null, React.createElement("h3", { className: "font-semibold text-gray-800 text-lg" }, book.title)), React.createElement("a", { href: book.pdfLink, target: "_blank", rel: "noopener noreferrer", className: "flex-shrink-0 ml-4 flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 text-sm" }, React.createElement(DownloadIcon, null), "PDF")), React.createElement("button", { onClick: () => setSelectedBook(book), className: "mt-4 w-full bg-teal-50 text-teal-700 font-semibold py-2 px-4 rounded-lg hover:bg-teal-100" }, "Read in App"))) ); }))
+    );
 };
 
 
@@ -978,8 +950,19 @@ const App = () => {
 
     useEffect(() => {
         const storedDate = LocalDataStore.load(LocalDataStore.KEYS.SOBRIETY);
-        if (storedDate) {
-            setSobrietyStartDate(new Date(storedDate));
+        if (storedDate && storedDate !== 'null') { 
+            try {
+                // Ensure storedDate is treated as an ISO string and converted to Date object
+                const dateObj = new Date(storedDate);
+                if (!isNaN(dateObj.getTime())) {
+                    setSobrietyStartDate(dateObj);
+                } else {
+                    console.error("Invalid date format in localStorage.");
+                }
+            } catch (e) {
+                console.error("Error parsing sobriety date:", e);
+                setSobrietyStartDate(null); // Reset if invalid
+            }
         }
         setIsDataLoading(false);
     }, []);
@@ -1007,7 +990,8 @@ const App = () => {
     const renderContent = () => {
         if (isAuthLoading || isDataLoading) return React.createElement("div", { className: "h-full flex items-center justify-center" }, React.createElement(Spinner, null));
         
-        if (!sobrietyStartDate) return React.createElement(SobrietyDataSetup, { onDateSet: setSobrietyStartDate });
+        // If sobriety date is null or invalid, show setup
+        if (!sobrietyStartDate || isNaN(sobrietyStartDate.getTime())) return React.createElement(SobrietyDataSetup, { onDateSet: setSobrietyStartDate });
         
         if (sobrietyStartDate) {
             switch (activeView) {
@@ -1064,5 +1048,12 @@ const App = () => {
 
 // Initialize and render the App component
 const container = document.getElementById('root');
-const root = ReactDOM.createRoot(container);
-root.render(React.createElement(App, null));
+// Check if ReactDOM exists (it should, as it's loaded via CDN)
+if (ReactDOM) {
+    const root = ReactDOM.createRoot(container);
+    root.render(React.createElement(App, null));
+} else {
+    // Fallback: This message won't show on a white screen, but it's good for console debugging
+    console.error("ReactDOM not found. Check if the CDN scripts are loading correctly.");
+    container.innerHTML = '<h1>Error: Failed to load React components. Check your script console.</h1>';
+}
