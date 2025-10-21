@@ -4,7 +4,51 @@ import {
     literatureData, 
     journalTemplates as exportedJournalTemplates, // Rename to avoid conflict
     copingStrategies, 
-    MEETING_LINKS 
+    MEETING_LINKS<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Addict's Agenda</title>
+    
+    <!-- Load Tailwind CSS via CDN (can be loaded here) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define custom font and ensure full-screen layout */
+        body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        #root { display: flex; justify-content: center; min-height: 100vh; width: 100%; }
+        /* Preserve line breaks for journal/workbook text */
+        .whitespace-pre-wrap { white-space: pre-wrap; }
+        /* Style for the Step Quote */
+        .step-quote {
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #10b981;
+            background-color: #f0fdfa;
+            color: #064e3b;
+            font-style: italic;
+            border-radius: 0.25rem;
+        }
+        .workbook-question {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Load React and ReactDOM from CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- CRITICAL: Load main application logic as a native ES Module (type="module") -->
+    <!-- The main module will import data.js and icons.js -->
+    <script type="module" src="./app.js"></script> 
+</body>
+</html>
+
 } from './data.js';
 
 import { 
