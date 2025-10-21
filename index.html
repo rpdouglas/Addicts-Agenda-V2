@@ -44,21 +44,21 @@
 
         // --- APPLICATION VERSIONING ---
         const APP_VERSIONS = {
-            DASHBOARD: '1.3.0', // UPDATED: Added Meeting Finder
+            DASHBOARD: '1.3.0',
             JOURNAL: '1.4.0', 
-            GOALS: '1.1.0',
-            COPING: '1.1.0',
+            GOALS: '1.1.0', 
+            COPING: '2.1.0', // UPDATED: More cards added
             WORKBOOK: '1.4.1',
             LITERATURE: '1.1.0',
             RESOURCES: '1.0.0',
             SETTINGS: '1.0.0',
-            MEETINGFINDER: '1.0.0', // NEW
+            MEETINGFINDER: '1.0.0',
         };
 
         // --- RECOVERY INSIGHTS/FACTS DATA ---
         const RECOVERY_FACTS = [
             "The Serenity Prayer was popularized by AA, but was originally written by theologian Reinhold Niebuhr.",
-            "AA's Big Book was first published in 1939 and its core text (the first 164 pages) remains unchanged.",
+            "AA's Big Book was first published in 1939 and its core text (first 164 pages) remains unchanged.",
             "The 12 Traditions were developed to guide AA groups in their relationships with the world, not just to guide the individual.",
             "The motto 'Just for Today' is commonly used across many 12-Step fellowships to emphasize living in the present moment.",
             "The first Narcotics Anonymous meeting was held in Southern California in 1953.",
@@ -109,6 +109,10 @@
         const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
         const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 0-2 0l-.15-.09a2 2 0 0 0-2.73 2.73l.09.15a2 2 0 0 0 0 2l-.25.43a2 2 0 0 1-1.73 1H2v.44a2 2 0 0 0 2 2h.18a2 2 0 0 1 1.73 1l.25.43a2 2 0 0 0 0 2l-.09.15a2 2 0 0 0 2.73 2.73l.15-.09a2 2 0 0 1 2 0l.43.25a2 2 0 0 0 1 1.73v.18a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 0 2 0l.15.09a2 2 0 0 0 2.73-2.73l-.09-.15a2 2 0 0 0 0-2l.25-.43a2 2 0 0 1 1.73-1H22v-.44a2 2 0 0 0-2-2h-.18a2 2 0 0 1-1.73-1l-.25-.43a2 2 0 0 0 0-2l.09-.15a2 2 0 0 0-2.73-2.73l-.15.09a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V2a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
         const MapPinIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.7c-4.4-4.4-8-8.2-8-11.7C4 5.3 7.6 2 12 2s8 3.3 8 8C20 13.5 16.4 17.3 12 21.7z"/><circle cx="12" cy="10" r="3"/></svg>;
+        const PhoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3.08a2 2 0 0 1-2 2A20 20 0 0 1 2 4a2 2 0 0 1 2-2h3.08a2 2 0 0 1 2 2v3.08a2 2 0 0 1-2 2l-1.08-1.08a10 10 0 0 0 6.9 6.9l-1.08-1.08a2 2 0 0 1 2 2z"/></svg>;
+        const PenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>;
+        const ZapIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+        const GridIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>;
 
 
         // --- LOCAL STORAGE UTILITIES ---
@@ -388,7 +392,7 @@
                 useEffect(() => {
                     if (journalTemplate && setJournalTemplate) {
                         setNewItem(journalTemplate);
-                        setJournalTemplate('');
+                        setNewItem('');
                     }
                 }, [journalTemplate, setJournalTemplate]);
 
@@ -479,9 +483,14 @@
                     <form onSubmit={handleSaveNewEntry} className="mb-2 space-y-2">
                         
                         {isEditingExisting && (
-                            <p className="text-sm font-semibold text-teal-700 mb-2">
-                                Editing Existing Entry: {items.find(i => i.id === itemToEditId)?.timestamp.toLocaleString()}
-                            </p>
+                            <div className="flex justify-between items-center bg-teal-50 p-3 rounded-lg mb-4">
+                                <p className="text-sm font-semibold text-teal-700">
+                                    Editing Entry from: {items.find(i => i.id === itemToEditId)?.timestamp.toLocaleString()}
+                                </p>
+                                <button type="button" onClick={handleCancelEditJournal} className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded">
+                                    Cancel
+                                </button>
+                            </div>
                         )}
                         
                         {/* Template Selector (Only for Journal) */}
@@ -521,12 +530,8 @@
 
                         {/* Submit button(s) */}
                         <div className={`flex justify-end gap-2`}>
-                            {isEditingExisting && (
-                                <button type="button" onClick={handleCancelEditJournal} className="bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-lg shadow-md hover:bg-gray-400">
-                                    Cancel Edit
-                                </button>
-                            )}
-                            <button type="submit" className="bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700">
+                            
+                            <button type="submit" className="w-full bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700">
                                 {isEditingExisting ? 'Save Changes' : 'Add New Entry'}
                             </button>
                         </div>
@@ -567,7 +572,7 @@
                                 <ul className="space-y-3"> 
                                     {items.map(item => ( 
                                         <li key={item.id} className="p-4 bg-gray-50 rounded-lg shadow-sm">
-                                            {/* Goal editing (still inline for simplicity) */}
+                                            {/* We only use inline editing for GOALS now. Journal uses the main box. */}
                                             {config.collectionName === 'goals' && editingItem?.id === item.id ? (
                                                 <form onSubmit={handleUpdateGoals} className="space-y-2">
                                                     <textarea
@@ -623,14 +628,6 @@
 
         // --- COMPONENT: Resources (Unchanged) ---
         const Resources = () => ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"><h2 className="text-2xl font-bold text-gray-800 mb-2">S.O.S. Resources</h2><p className="text-gray-600 mb-6">You are not alone. Help is available.</p><ul className="space-y-4"> {[{ name: "SAMHSA National Helpline", number: "1-800-662-4357", description: "Confidential free help to find substance use treatment and information." }, { name: "National Suicide Prevention Lifeline", number: "988", description: "24/7, free and confidential support for people in distress." }, { name: "Alcoholics Anonymous (A.A.)", link: "https://www.aa.org", description: "Find local and online meetings and resources." }, { name: "Narcotics Anonymous (N.A.)", link: "https://www.na.org", description: "Find local and online meetings and resources." }].map(item => ( <li key={item.name} className="p-4 bg-gray-50 rounded-lg shadow-sm"><h3 className="font-bold text-teal-700">{item.name}</h3><p className="text-gray-600 my-1">{item.description}</p>{item.number && <a href={`tel:${item.number}`} className="text-blue-600 font-semibold hover:underline">{item.number}</a>}{item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold hover:underline">Visit Website</a>}</li> ))}</ul></div> );
-
-        // --- COMPONENT: Coping Cards (Unchanged) ---
-        const CopingCards = ({ onJournal }) => {
-            const copingStrategies = useMemo(() => [ { title: "Deep Breathing", description: "Inhale for 4s, hold for 7s, exhale for 8s. Repeat 3-5 times." }, { title: "5-4-3-2-1 Method", description: "Name: 5 things you see, 4 you feel, 3 you hear, 2 you smell, 1 you taste." }, { title: "Go for a Walk", description: "A 10-15 minute walk can change your scenery and mindset." }, { title: "Play the Tape Through", description: "Think about the full consequences of giving in to a craving." }, { title: "Call a Friend", description: "Talk about what you're feeling with your support network." }, { title: "Delay and Distract", description: "Wait 15 minutes. Do something to distract yourself in that time." }, ], []);
-            const [currentIndex, setCurrentIndex] = useState(0);
-            const card = copingStrategies[currentIndex];
-            return ( <div className="flex flex-col items-center justify-center h-full p-4 animate-fade-in"> <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center flex-grow flex flex-col justify-center"> <h2 className="text-2xl font-bold text-teal-600 mb-4">{card.title}</h2> <p className="text-gray-700 text-lg">{card.description}</p> </div> <div className="flex flex-col sm:flex-row gap-4 mt-6"> <button onClick={() => onJournal(card)} className="bg-white text-teal-600 border border-teal-600 font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-50 transition-colors">Journal on This</button> <button onClick={() => setCurrentIndex((p) => (p + 1) % copingStrategies.length)} className="bg-teal-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-700 transform hover:scale-105">Next Card</button> </div> </div> );
-        };
 
         // --- COMPONENT: Meeting Finder ---
         const MEETING_LINKS = {
@@ -699,6 +696,68 @@
                         <p>Tip: When the external site opens, use their geolocation features or search fields to find meetings near you.</p>
                     </div>
                 </div>
+            );
+        };
+
+        // --- COMPONENT: Coping Cards (Updated) ---
+        const copingStrategies = [
+            { title: "Deep Breathing", description: "Inhale for 4s, hold for 7s, exhale for 8s. Repeat 3-5 times.", category: "Grounding", color: "from-blue-100 to-indigo-200", icon: MapPinIcon },
+            { title: "5-4-3-2-1 Method", description: "Name: 5 things you see, 4 you feel, 3 you hear, 2 you smell, 1 you taste.", category: "Grounding", color: "from-blue-100 to-indigo-200", icon: MapPinIcon },
+            { title: "Go for a Walk", description: "A 10-15 minute walk can change your scenery and mindset.", category: "Action", color: "from-green-100 to-emerald-200", icon: PhoneIcon },
+            { title: "Play the Tape Through", description: "Think about the full consequences of giving in to a craving.", category: "Cognitive", color: "from-pink-100 to-red-200", icon: ShieldIcon },
+            { title: "Call a Friend", description: "Talk about what you're feeling with your support network.", category: "Connection", color: "from-green-100 to-emerald-200", icon: PhoneIcon },
+            { title: "Delay and Distract", description: "Wait 15 minutes. Do something to distract yourself in that time.", category: "Cognitive", color: "from-pink-100 to-red-200", icon: ShieldIcon },
+        ];
+
+        const allCopingCards = copingStrategies;
+
+        const CopingCards = ({ onJournal }) => {
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const card = allCopingCards[currentIndex];
+            const maxIndex = allCopingCards.length - 1;
+
+            const showNextCard = () => {
+                setCurrentIndex((prevIndex) => (prevIndex + 1) % allCopingCards.length);
+            };
+
+            const showPreviousCard = () => {
+                setCurrentIndex((prevIndex) => (prevIndex - 1 + allCopingCards.length) % allCopingCards.length);
+            };
+
+            const CardIconComponent = card.icon;
+
+            return ( 
+                <div className="flex flex-col items-center justify-center h-full p-4 animate-fade-in"> 
+                    <div 
+                        className={`p-8 rounded-xl shadow-xl w-full max-w-md text-center flex-grow flex flex-col justify-between 
+                                   bg-gradient-to-br ${card.color} text-gray-900 border border-gray-100`}
+                    >
+                        <div className="flex justify-between items-start mb-4">
+                            <button onClick={showPreviousCard} className="text-gray-700 hover:text-black p-1 rounded-full bg-white/70 shadow-md">
+                                <ArrowLeftIcon />
+                            </button>
+                            <div className="flex flex-col items-center">
+                                <CardIconComponent className="w-8 h-8 text-teal-800 mb-2" />
+                                <p className="text-xs font-semibold uppercase tracking-wider text-teal-800">{card.category}</p>
+                            </div>
+                            <button onClick={showNextCard} className="text-gray-700 hover:text-black p-1 rounded-full bg-white/70 shadow-md">
+                                <ArrowLeftIcon style={{ transform: 'rotate(180deg)' }} />
+                            </button>
+                        </div>
+                        
+                        <div className="flex flex-col justify-center flex-grow">
+                            <h2 className="text-3xl font-bold text-teal-900 mb-4">{card.title}</h2>
+                            <p className="text-gray-800 text-lg">{card.description}</p>
+                        </div>
+
+                        <p className="text-xs text-gray-600 mt-4">Card {currentIndex + 1} of {allCopingCards.length}</p>
+
+                    </div> 
+                    
+                    <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full max-w-md"> 
+                        <button onClick={() => onJournal(card)} className="w-full bg-white text-teal-600 border-2 border-teal-600 font-bold py-3 px-8 rounded-lg shadow-md hover:bg-teal-50 transition-colors">Journal on This</button>
+                    </div> 
+                </div> 
             );
         };
 
@@ -1138,7 +1197,6 @@
                 return () => clearTimeout(delayDebounceFn);
             }, [response, questionKey]);
 
-
             return (
                 <div className="mb-4 pb-2">
                     <p className="workbook-question text-gray-800">{questionText}</p>
@@ -1400,7 +1458,6 @@
                         case 'coping': return <CopingCards onJournal={handleJournalFromCopingCard} />;
                         case 'workbook': return <RecoveryWorkbook />;
                         case 'literature': return <RecoveryLiterature />;
-                        case 'finder': return <MeetingFinder />;
                         case 'resources': return <Resources />;
                         case 'settings': return <Settings 
                             currentStartDate={sobrietyStartDate} 
