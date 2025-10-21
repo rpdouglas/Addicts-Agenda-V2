@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Addict's Agenda</title>
     
-    <!-- Load Tailwind CSS via CDN (can be loaded here) -->
+    <!-- Load Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Define custom font and ensure full-screen layout */
@@ -33,7 +33,7 @@
 <body>
     <div id="root"></div>
 
-    <!-- CRITICAL FIX: Load React/Babel AFTER the DOM (and the #root element) has been created. -->
+    <!-- CRITICAL: Load React/Babel AFTER the DOM has been created. -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -91,30 +91,83 @@
             }
         };
 
-        // --- SVG Icons ---
-        const BookOpenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
-        const TargetIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
-        const LifeBuoyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"></line><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"></line><line x1="9.17" y1="14.83" x2="4.93" y2="19.07"></line></svg>;
-        const ClipboardListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" /></svg>;
-        const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
-        const ArrowLeftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
-        const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
-        const SparklesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3L9.27 9.27L3 12l6.27 2.73L12 21l2.73-6.27L21 12l-6.27-2.73z"/></svg>;
-        const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
-        const LibraryIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20v2H6.5A2.5 2.5 0 0 1 4 16.5v-11A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 1 4 14.5Z"/><path d="m2 7 2 5 2-5"/><path d="m8.5 7.5 4 4-4 4"/></svg>;
-        const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
-        const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>;
-        const ChevronDown = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
-        const ChevronUp = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>;
-        const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
-        const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 0-2 0l-.15-.09a2 2 0 0 0-2.73 2.73l.09.15a2 2 0 0 0 0 2l-.25.43a2 2 0 0 1-1.73 1H2v.44a2 2 0 0 0 2 2h.18a2 2 0 0 1 1.73 1l.25.43a2 2 0 0 0 0 2l-.09.15a2 2 0 0 0 2.73 2.73l.15-.09a2 2 0 0 1 2 0l.43.25a2 2 0 0 0 1 1.73v.18a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 0 2 0l.15.09a2 2 0 0 0 2.73-2.73l-.09-.15a2 2 0 0 0 0-2l.25-.43a2 2 0 0 1 1.73-1H22v-.44a2 2 0 0 0-2-2h-.18a2 2 0 0 1-1.73-1l-.25-.43a2 2 0 0 0 0-2l.09-.15a2 2 0 0 0-2.73-2.73l-.15.09a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V2a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
-        const MapPinIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.7c-4.4-4.4-8-8.2-8-11.7C4 5.3 7.6 2 12 2s8 3.3 8 8C20 13.5 16.4 17.3 12 21.7z"/><circle cx="12" cy="10" r="3"/></svg>;
-        const PhoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3.08a2 2 0 0 1-2 2A20 20 0 0 1 2 4a2 2 0 0 1 2-2h3.08a2 2 0 0 1 2 2v3.08a2 2 0 0 1-2 2l-1.08-1.08a10 10 0 0 0 6.9 6.9l-1.08-1.08a2 2 0 0 1 2 2z"/></svg>;
-        const PenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>;
-        const ZapIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
-        const GridIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>;
-        const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
-        const FileTextIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>;
+        // --- Journal Templates Data ---
+        const journalTemplates = [
+            { id: '', name: 'Select a Template...' },
+            { id: 'gratitude', name: '3-Part Gratitude Check', template: 'Today I am grateful for:\n1. (Person/Relationship)\n2. (Experience/Event)\n3. (Small Detail)\n\nHow did this feeling of gratitude influence my day?' },
+            { id: 'halt', name: 'The H.A.L.T. Check', template: 'Before reacting or craving, I will check:\n\n**H**ungry? (Yes/No): \n**A**ngry? (Yes/No): \n**L**onely? (Yes/No): \n**T**ired? (Yes/No): \n\nWhat action did I take to meet my true need?' },
+            { id: 'resentment', name: 'Resentment Filter', template: 'Today I felt resentful toward: (Person/Situation)\n\nWhat did they do? \n\nWhat part of my self-esteem (pride, security, ambition) did this threaten? \n\nWhat is my part in this situation?' },
+            { id: 'step_10', name: 'Step 10 Spot Check', template: 'Where was I wrong today? (Small admissions of fault or mistake)\n\nWas I mindful of others?\n\nDid I practice honesty in a difficult situation?\n\nIf I was wrong, did I promptly admit it?' },
+        ];
+        
+        // --- Coping Cards Data ---
+        const copingStrategies = [
+            { title: "Deep Breathing", description: "Inhale for 4s, hold for 7s, exhale for 8s. Repeat 3-5 times.", category: "Grounding", color: "from-blue-100 to-indigo-200", icon: 'MapPinIcon' },
+            { title: "5-4-3-2-1 Method", description: "Name: 5 things you see, 4 you feel, 3 you hear, 2 you smell, 1 you taste.", category: "Grounding", color: "from-blue-100 to-indigo-200", icon: 'MapPinIcon' },
+            { title: "Go for a Walk", description: "A 10-15 minute walk can change your scenery and mindset.", category: "Action", color: "from-green-100 to-emerald-200", icon: 'PhoneIcon' },
+            { title: "Play the Tape Through", description: "Think about the full consequences of giving in to a craving.", category: "Cognitive", color: "from-pink-100 to-red-200", icon: 'ShieldIcon' },
+            { title: "Call a Friend", description: "Talk about what you're feeling with your support network.", category: "Connection", color: "from-green-100 to-emerald-200", icon: 'PhoneIcon' },
+            { title: "Delay and Distract", description: "Wait 15 minutes. Do something to distract yourself in that time.", category: "Cognitive", color: "from-pink-100 to-red-200", icon: 'ShieldIcon' },
+        ];
+        
+        const MEETING_LINKS = {
+            AA: {
+                name: "Alcoholics Anonymous (AA)",
+                description: "Find local, in-person, or online AA meetings.",
+                link: "https://www.aa.org/find-meetings",
+                instructions: "The official AA website provides local directories and search tools."
+            },
+            NA: {
+                name: "Narcotics Anonymous (NA)",
+                description: "Find local and online NA meetings.",
+                link: "https://www.na.org/meetingsearch/",
+                instructions: "Use the NA Meeting Locator to find times and locations in your area."
+            },
+            CA: {
+                name: "Cocaine Anonymous (CA)",
+                description: "Find CA meetings globally.",
+                link: "https://www.ca.org/meetings/",
+                instructions: "The CA website offers a global directory and online meeting resources."
+            }
+        };
+
+        // --- SVG Icons (Consolidated from icons.js and converted to JSX) ---
+        const BookOpenIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
+        const TargetIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>;
+        const LifeBuoyIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"></line><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"></line><line x1="9.17" y1="14.83" x2="4.93" y2="19.07"></line></svg>;
+        const ClipboardListIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" /></svg>;
+        const ShieldIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
+        const ArrowLeftIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
+        const TrashIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
+        const SparklesIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3L9.27 9.27L3 12l6.27 2.73L12 21l2.73-6.27L21 12l-6.27-2.73z"/></svg>;
+        const CheckCircleIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+        const LibraryIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20v2H6.5A2.5 2.5 0 0 1 4 16.5v-11A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 1 4 14.5Z"/><path d="m2 7 2 5 2-5"/><path d="m8.5 7.5 4 4-4 4"/></svg>;
+        const DownloadIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+        const EditIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>;
+        const ChevronDown = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
+        const ChevronUp = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>;
+        const CheckIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+        const SettingsIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 0-2 0l-.15-.09a2 2 0 0 0-2.73 2.73l.09.15a2 2 0 0 0 0 2l-.25.43a2 2 0 0 1-1.73 1H2v.44a2 2 0 0 0 2 2h.18a2 2 0 0 1 1.73 1l.25.43a2 2 0 0 0 0 2l-.09.15a2 2 0 0 0 2.73 2.73l.15-.09a2 2 0 0 1 2 0l.43.25a2 2 0 0 0 1 1.73v.18a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 0 2 0l.15.09a2 2 0 0 0 2.73-2.73l-.09-.15a2 2 0 0 0 0-2l.25-.43a2 2 0 0 1 1.73-1H22v-.44a2 2 0 0 0-2-2h-.18a2 2 0 0 1-1.73-1l-.25-.43a2 2 0 0 0 0-2l.09-.15a2 2 0 0 0-2.73-2.73l-.15.09a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V2a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
+        const MapPinIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.7c-4.4-4.4-8-8.2-8-11.7C4 5.3 7.6 2 12 2s8 3.3 8 8C20 13.5 16.4 17.3 12 21.7z"/><circle cx="12" cy="10" r="3"/></svg>;
+        const PhoneIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3.08a2 2 0 0 1-2 2A20 20 0 0 1 2 4a2 2 0 0 1 2-2h3.08a2 2 0 0 1 2 2v3.08a2 2 0 0 1-2 2l-1.08-1.08a10 10 0 0 0 6.9 6.9l-1.08-1.08a2 2 0 0 1 2 2z"/></svg>;
+        const PenIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>;
+        const ZapIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+        const GridIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>;
+        const XIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+        const FileTextIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>;
+
+
+        // Map string names in copingStrategies to the actual JSX components
+        const iconMap = {
+            MapPinIcon: MapPinIcon,
+            PhoneIcon: PhoneIcon,
+            ShieldIcon: ShieldIcon,
+        };
+        const allCopingCards = copingStrategies.map(card => ({
+            ...card,
+            icon: iconMap[card.icon] || ShieldIcon
+        }));
+
 
         // --- LOCAL STORAGE UTILITIES ---
         const LocalDataStore = {
@@ -134,6 +187,7 @@
                     if (key === LocalDataStore.KEYS.WELCOME_TIP) { // NEW CHECK
                         return serializedData === 'true';
                     }
+                    // For JSON data (Arrays/Objects)
                     return serializedData === null ? [] : JSON.parse(serializedData);
                 } catch (error) {
                     console.error(`Error loading data from localStorage for key ${key}:`, error);
@@ -142,7 +196,8 @@
             },
             save: (key, data) => {
                 try {
-                    const dataToStore = key === LocalDataStore.KEYS.SOBRIETY || key === LocalDataStore.KEYS.WELCOME_TIP
+                    // Store strings/booleans as strings, and objects/arrays as JSON strings
+                    const dataToStore = (key === LocalDataStore.KEYS.SOBRIETY || key === LocalDataStore.KEYS.WELCOME_TIP)
                         ? data : JSON.stringify(data);
                     localStorage.setItem(key, dataToStore);
                 } catch (error) {
@@ -156,10 +211,11 @@
                     if (LocalDataStore.KEYS[key] !== LocalDataStore.KEYS.WELCOME_TIP) {
                          const rawData = localStorage.getItem(LocalDataStore.KEYS[key]);
                          if (rawData) {
-                             // Try to parse if it's not the raw sobriety date string
+                             // Try to parse if it's JSON data
                              try {
                                  allData[LocalDataStore.KEYS[key]] = JSON.parse(rawData);
                              } catch {
+                                 // Fallback for raw strings (like the sobriety date)
                                  allData[LocalDataStore.KEYS[key]] = rawData;
                              }
                          }
@@ -185,7 +241,7 @@
             const handleSave = () => {
                 const newStartDate = new Date(date);
                 LocalDataStore.save(LocalDataStore.KEYS.SOBRIETY, newStartDate.toISOString());
-                // Set the welcome tip to be visible for new users
+                // Set the welcome tip to be visible for new users (false means NOT dismissed, saved as 'false' string)
                 LocalDataStore.save(LocalDataStore.KEYS.WELCOME_TIP, 'false');
                 onDateSet(newStartDate);
             };
@@ -196,6 +252,8 @@
         const SobrietyTracker = ({ startDate }) => {
             const calculateTimeSober = () => {
                 const diff = new Date().getTime() - new Date(startDate).getTime();
+                // Ensure diff is positive (prevents negative time for future dates, though handled by validation)
+                if (diff < 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
                 return { days: Math.floor(diff / 86400000), hours: Math.floor((diff % 86400000) / 3600000), minutes: Math.floor((diff % 3600000) / 60000), seconds: Math.floor((diff % 60000) / 1000) };
             };
             const [timeSober, setTimeSober] = useState(calculateTimeSober());
@@ -204,12 +262,12 @@
             return ( <div className="bg-white p-6 rounded-xl shadow-lg text-center"><h3 className="text-lg font-semibold text-gray-500 mb-4">You are on your path</h3><div className="grid grid-cols-4 gap-2 sm:gap-4">{timeUnits.map(unit => ( <div key={unit.label} className="flex flex-col items-center bg-gray-100 p-2 sm:p-3 rounded-lg"><span className="text-3xl sm:text-4xl font-bold text-teal-600">{String(unit.value).padStart(2, '0')}</span><span className="text-xs sm:text-sm text-gray-600 uppercase tracking-wider">{unit.label}</span></div> ))}</div></div> );
         };
 
-        // --- COMPONENT: WelcomeTip (New Onboarding Component) ---
+        // --- COMPONENT: WelcomeTip (Onboarding Component) ---
         const WelcomeTip = ({ onDismiss }) => {
             return (
                 <div className="p-4 bg-blue-100 border border-blue-300 rounded-xl shadow-md flex justify-between items-start mb-6">
                     <div className="flex-grow pr-4">
-                        <p className="font-bold text-blue-800 mb-1">Welcome to Recovery</p>
+                        <p className="font-bold text-blue-800 mb-1">Welcome Tip: Recovery Jargon</p>
                         <p className="text-sm text-blue-700">
                             You'll see terms like **HALT** (Hungry, Angry, Lonely, Tired) and **Inventory** (self-reflection). Don't worry if they're new—the Workbook and Journal are here to guide you.
                         </p>
@@ -225,6 +283,7 @@
             );
         };
 
+
         // --- COMPONENT: Dashboard ---
         const Dashboard = ({ onNavigate, sobrietyStartDate }) => {
             // Select a random fact on component render
@@ -233,7 +292,7 @@
                 return RECOVERY_FACTS[randomIndex];
             }, []);
             
-            // NEW: State for Onboarding Tip
+            // State for Onboarding Tip
             const [isTipDismissed, setIsTipDismissed] = useState(LocalDataStore.load(LocalDataStore.KEYS.WELCOME_TIP));
 
             const handleDismissTip = () => {
@@ -247,15 +306,15 @@
                 { view: 'coping', label: 'Coping Cards', icon: <ShieldIcon /> },
                 { view: 'workbook', label: 'Recovery Workbook', icon: <ClipboardListIcon /> },
                 { view: 'literature', label: 'Recovery Literature', icon: <LibraryIcon /> },
-                { view: 'finder', label: 'Meeting Finder', icon: <MapPinIcon /> }, // NEW MEETING FINDER
+                { view: 'finder', label: 'Meeting Finder', icon: <MapPinIcon /> },
                 { view: 'resources', label: 'S.O.S. Resources', icon: <LifeBuoyIcon /> },
             ];
             return ( 
                 <div className="animate-fade-in space-y-6">
-                    {/* NEW: Display Welcome Tip if not dismissed */}
+                    {/* Display Welcome Tip if not dismissed */}
                     {!isTipDismissed && <WelcomeTip onDismiss={handleDismissTip} />}
                     
-                    {/* NEW: Display Random Fact */}
+                    {/* Display Random Fact */}
                     <div className="text-center p-3 bg-yellow-50 rounded-xl shadow-sm border border-yellow-200">
                         <p className="text-sm font-medium text-yellow-800 italic">Recovery Insight: {randomFact}</p>
                     </div>
@@ -283,14 +342,14 @@
 
             const [newDate, setNewDate] = useState(initialDateString);
             const [journalChecked, setJournalChecked] = useState(false);
-            const [exporting, setExporting] = useState(false); // NEW State
+            const [exporting, setExporting] = useState(false); 
 
             const handleSave = () => {
                 const updatedDate = new Date(newDate);
                 handleSobrietyDateUpdate(updatedDate, journalChecked);
             };
             
-            // NEW: Data Export Handler
+            // Data Export Handler
             const handleExportData = () => {
                 setExporting(true);
                 const data = LocalDataStore.loadAll();
@@ -351,7 +410,7 @@
                             </button>
                         </div>
                         
-                        {/* NEW: Data Export Section */}
+                        {/* Data Export Section */}
                         <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                             <h3 className="flex items-center gap-2 text-lg font-bold text-yellow-800 mb-2"><FileTextIcon/> Data Management</h3>
                             <p className="text-sm text-gray-700 mb-4">
@@ -372,35 +431,49 @@
             );
         };
         
-        // --- Journal Templates Data ---
-        const journalTemplates = [
-            { id: '', name: 'Select a Template...' },
-            { id: 'gratitude', name: '3-Part Gratitude Check', template: 'Today I am grateful for:\n1. (Person/Relationship)\n2. (Experience/Event)\n3. (Small Detail)\n\nHow did this feeling of gratitude influence my day?' },
-            { id: 'halt', name: 'The H.A.L.T. Check', template: 'Before reacting or craving, I will check:\n\n**H**ungry? (Yes/No): \n**A**ngry? (Yes/No): \n**L**onely? (Yes/No): \n**T**ired? (Yes/No): \n\nWhat action did I take to meet my true need?' },
-            { id: 'resentment', name: 'Resentment Filter', template: 'Today I felt resentful toward: (Person/Situation)\n\nWhat did they do? \n\nWhat part of my self-esteem (pride, security, ambition) did this threaten? \n\nWhat is my part in this situation?' },
-            { id: 'step_10', name: 'Step 10 Spot Check', template: 'Where was I wrong today? (Small admissions of fault or mistake)\n\nWas I mindful of others?\n\nDid I practice honesty in a difficult situation?\n\nIf I was wrong, did I promptly admit it?' },
-        ];
-
-
-        // --- COMPONENT: GeminiJournalHelper (Unchanged) ---
+        // --- COMPONENT: GeminiJournalHelper (AI integration) ---
         const GeminiJournalHelper = ({ onInsertText, onClose }) => {
             const [prompt, setPrompt] = useState(''); const [isLoading, setIsLoading] = useState(false); const [result, setResult] = useState(''); const [error, setError] = useState('');
             const handleGenerate = async () => {
                 if (!prompt.trim()) { setError('Please enter a topic or feeling.'); return; }
                 setIsLoading(true); setResult(''); setError('');
-                const systemPrompt = "You are a gentle and supportive journaling assistant for someone in recovery... Start the entry naturally, without greetings like 'Dear Journal'.";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=`;
+                const systemPrompt = "You are a gentle and supportive journaling assistant for someone in recovery. Provide a brief, reflective paragraph (max 100 words) based on the user's prompt. Start the entry naturally, without greetings like 'Dear Journal'.";
+                
+                // Using a placeholder API key which will be handled by the Canvas environment
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                
+                const payload = { 
+                    contents: [{ parts: [{ text: prompt }] }], 
+                    systemInstruction: { parts: [{ text: systemPrompt }] } 
+                };
+
+                // Simple retry logic (no exponential backoff for this simple example)
+                let response;
                 try {
-                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: systemPrompt }] } }) });
+                    response = await fetch(apiUrl, { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(payload) 
+                    });
+                    
                     if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
-                    const data = await response.json(); const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    const data = await response.json(); 
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
                     if (text) setResult(text); else throw new Error("No text returned.");
-                } catch (e) { console.error("Gemini API call failed:", e); setError("Sorry, I couldn't generate a response right now."); } finally { setIsLoading(false); }
+                } catch (e) { 
+                    console.error("Gemini API call failed:", e); 
+                    setError("Sorry, I couldn't generate a response right now."); 
+                } finally { 
+                    setIsLoading(false); 
+                }
             };
             return ( <div className="p-4 border-t-2 border-teal-100 mt-4 space-y-3"><p className="text-sm text-gray-600 font-semibold">Need help starting? Give the AI a topic.</p><textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="e.g., 'Feeling grateful' or 'Anxious about work'..." className="w-full p-2 border border-gray-300 rounded-lg text-sm" rows="2"/><button onClick={handleGenerate} disabled={isLoading} className="w-full bg-teal-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-teal-600 disabled:bg-gray-400 flex items-center justify-center">{isLoading ? <Spinner small /> : 'Generate Idea'}</button>{error && <p className="text-red-500 text-sm">{error}</p>}{result && ( <div className="p-3 bg-gray-100 rounded-lg space-y-3"> <p className="text-gray-800 text-sm">{result}</p> <button onClick={() => { onInsertText(result); onClose(); }} className="w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600">Use This Entry</button> </div> )}</div> );
         };
         
-        // --- COMPONENT: DebouncedTextarea (The Fix) ---
+        // --- COMPONENT: DebouncedTextarea (For auto-saving journal/goals) ---
         const DebouncedTextarea = ({ value, onChange, placeholder, rows, isInput = false, isDisabled = false }) => {
             const [localValue, setLocalValue] = useState(value);
 
@@ -442,8 +515,6 @@
             };
 
             if (isInput) {
-                // Use input for goals for simplicity, but wrap with DebouncedTextarea logic.
-                // NOTE: Goals now uses isInput=false for multi-line support.
                  return <input type="text" {...commonProps} />;
             } else {
                 return <textarea rows={rows} {...commonProps} />;
@@ -458,15 +529,18 @@
                 const isJournal = config.collectionName === 'journal';
                 const [items, setItems] = useState([]);
                 const [newItem, setNewItem] = useState('');
-                const [editingItem, setEditingItem] = useState(null);
-                const [editedText, setEditedText] = useState('');
+                const [editingItem, setEditingItem] = useState(null); // For Goals inline edit
+                const [editedText, setEditedText] = useState(''); // For Goals inline edit
                 const [isLoading, setIsLoading] = useState(true);
                 const [showGeminiHelper, setShowGeminiHelper] = useState(false);
                 const [selectedTemplateId, setSelectedTemplateId] = useState('');
                 
-                // For editing Journal entries
+                // For editing Journal entries in the main box
                 const [isEditingExisting, setIsEditingExisting] = useState(false);
                 const [itemToEditId, setItemToEditId] = useState(null);
+
+                // NEW: View management state ('list' or 'form' for Journal, always 'form' for Goals)
+                const [viewMode, setViewMode] = useState(isJournal ? 'list' : 'form');
 
 
                 // Persistence handler
@@ -499,6 +573,7 @@
                         setNewItem(journalTemplate);
                         // Important: Clear the template state in the parent (App) component
                         setJournalTemplate(''); 
+                        setViewMode('form'); // Switch to form when a template is applied from outside
                     }
                 }, [journalTemplate, setJournalTemplate, isJournal]);
 
@@ -517,12 +592,17 @@
                     setItemToEditId(item.id);
                     setNewItem(item.text);
                     setIsEditingExisting(true);
+                    setViewMode('form'); // Switch to form view
                 };
 
                 const handleCancelEditJournal = () => {
                     setItemToEditId(null);
                     setNewItem('');
                     setIsEditingExisting(false);
+                    // Only return to list view if it's the Journal module
+                    if (isJournal) {
+                        setViewMode('list'); 
+                    }
                 };
 
                 const handleSaveNewEntry = (e) => {
@@ -536,7 +616,10 @@
                             item.id === itemToEditId ? { ...item, text: newItem, timestamp: new Date() } : item
                         );
                         saveItemsToLocal(updatedItems);
-                        handleCancelEditJournal(); // Clear edit state
+                        // Reset state
+                        setItemToEditId(null);
+                        setNewItem('');
+                        setIsEditingExisting(false);
                     } else {
                         // --- ADD NEW ENTRY ---
                         const newItemObject = { 
@@ -548,6 +631,10 @@
                         
                         saveItemsToLocal([newItemObject, ...items]);
                         setNewItem('');
+                    }
+                    
+                    if (isJournal) {
+                        setViewMode('list'); // Return to list view after save
                     }
                 };
                 
@@ -585,6 +672,49 @@
                 };
                 
                 // --- RENDER FUNCTIONS ---
+                
+                // NEW: Journal List View Component
+                const JournalListView = () => (
+                    <div className="flex-grow overflow-y-auto pr-2 -mr-2 mt-4">
+                        <button 
+                            onClick={() => setViewMode('form')} 
+                            className="w-full bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 mb-6 transition-colors"
+                        >
+                            Add New Entry
+                        </button>
+                        {isLoading ? <Spinner /> : (items.length > 0 ? ( 
+                            <ul className="space-y-3"> 
+                                {items.map(item => ( 
+                                    <li key={item.id} className="p-3 bg-gray-50 rounded-lg shadow-sm flex justify-between items-center transition-colors hover:bg-gray-100">
+                                        <div className="flex-grow">
+                                            <p className="text-gray-800 font-semibold">{new Date(item.timestamp).toLocaleDateString()}</p>
+                                            <p className="text-sm text-gray-500">{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                        </div>
+                                        <div className="flex space-x-2 flex-shrink-0">
+                                            <button onClick={() => handleStartEditJournal(item)} className="text-teal-600 hover:text-teal-800 text-sm font-semibold flex items-center gap-1 p-2 rounded-lg bg-white shadow-sm border border-gray-200">
+                                                <EditIcon /> Edit
+                                            </button>
+                                            <button onClick={() => handleDeleteItem(item.id)} className="text-red-500 hover:text-red-700 text-sm font-semibold flex items-center gap-1 p-2 rounded-lg bg-white shadow-sm border border-gray-200">
+                                                <TrashIcon />
+                                            </button>
+                                        </div>
+                                    </li>
+                                ))} 
+                            </ul> 
+                        ) : ( 
+                            <div className="text-center py-10">
+                                <p className="text-gray-500">No journal entries yet. Tap below to start.</p>
+                                <button 
+                                    onClick={() => setViewMode('form')} 
+                                    className="mt-4 bg-teal-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-teal-600 transition-colors"
+                                >
+                                    Start Your First Entry
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                );
+
 
                 const JournalForm = () => (
                     <form onSubmit={handleSaveNewEntry} className="mb-2 space-y-2">
@@ -594,9 +724,6 @@
                                 <p className="text-sm font-semibold text-teal-700">
                                     Editing Entry from: {items.find(i => i.id === itemToEditId)?.timestamp.toLocaleString()}
                                 </p>
-                                <button type="button" onClick={handleCancelEditJournal} className="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded">
-                                    Cancel
-                                </button>
                             </div>
                         )}
                         
@@ -618,7 +745,7 @@
                                     type="button" 
                                     onClick={handleApplyTemplate} 
                                     disabled={!selectedTemplateId} 
-                                    className="bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 disabled:bg-gray-400 flex items-center gap-1 transition-colors"
+                                    className="flex-shrink-0 bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 disabled:bg-gray-400 flex items-center gap-1 transition-colors"
                                 >
                                     <CheckIcon /> Apply
                                 </button>
@@ -637,8 +764,17 @@
 
                         {/* Submit button(s) */}
                         <div className={`flex justify-end gap-2`}>
+                            {isJournal && ( // Only show Cancel in Journal Form
+                                <button 
+                                    type="button" 
+                                    onClick={handleCancelEditJournal} 
+                                    className="flex-grow bg-gray-500 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition-colors"
+                                >
+                                    {isEditingExisting ? 'Discard Changes' : 'Cancel'}
+                                </button>
+                            )}
                             
-                            <button type="submit" className="w-full bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700">
+                            <button type="submit" className={`flex-grow bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 transition-colors ${!isJournal ? 'w-full' : ''}`}>
                                 {isEditingExisting ? 'Save Changes' : 'Add New Entry'}
                             </button>
                         </div>
@@ -647,25 +783,45 @@
                 
                 const GoalsForm = () => (
                     <form onSubmit={handleSaveNewEntry} className="flex gap-2 mb-6">
-                         {/* FIX: Use DebouncedTextarea with multi-line support for better goal entry */}
+                         {/* Using DebouncedTextarea as a textarea for multi-line goals */}
                          <DebouncedTextarea
                             value={newItem}
                             onChange={setNewItem}
                             placeholder={config.placeholder}
-                            isInput={false} // Allow textarea for multi-line goals
+                            isInput={false} 
                             rows="2"
                         />
                         <button type="submit" className="flex-shrink-0 bg-teal-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-teal-700 transition-colors">Add</button>
                     </form>
                 );
+                
+                // --- Final Render Logic ---
 
-
+                if (isJournal && viewMode === 'list') {
+                    // 1. Journal List View
+                     return ( 
+                        <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col"> 
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4">{config.title}</h2> 
+                            <p className="text-gray-600 mb-6">Review, edit, or create a new journal entry.</p> 
+                            {JournalListView()}
+                        </div>
+                     );
+                }
+                
+                // 2. Journal Form View (viewMode === 'form') OR the Goals Module (isJournal is false)
                 return ( 
                     <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col"> 
+                        
+                        {isJournal && viewMode === 'form' && (
+                            <button onClick={handleCancelEditJournal} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold flex-shrink-0">
+                                <ArrowLeftIcon /><span className="ml-2">Back to Entries List</span>
+                            </button>
+                        )}
+                        
                         <h2 className="text-2xl font-bold text-gray-800 mb-4">{config.title}</h2> 
                         <p className="text-gray-600 mb-6">{config.prompt}</p> 
                         
-                        {isJournal ? <JournalForm /> : <GoalsForm />}
+                        {isJournal ? JournalForm() : GoalsForm()}
 
                         {config.useGemini && isJournal && (
                             <> 
@@ -676,58 +832,52 @@
                             </>
                         )} 
                         
-                        <div className="flex-grow overflow-y-auto pr-2 -mr-2 mt-4"> 
-                            {isLoading ? <Spinner /> : (items.length > 0 ? ( 
-                                <ul className="space-y-3"> 
-                                    {items.map(item => ( 
-                                        <li key={item.id} className="p-4 bg-gray-50 rounded-lg shadow-sm">
-                                            {/* We only use inline editing for GOALS now. Journal uses the main box. */}
-                                            {config.collectionName === 'goals' && editingItem?.id === item.id ? (
-                                                <form onSubmit={handleUpdateGoals} className="space-y-2">
-                                                    <textarea
-                                                        value={editedText}
-                                                        onChange={(e) => setEditedText(e.target.value)}
-                                                        className="w-full p-2 border border-teal-500 rounded-lg resize-none"
-                                                        rows={2}
-                                                    />
-                                                    <div className="flex justify-end gap-2">
-                                                        <button type="button" onClick={() => setEditingItem(null)} className="text-gray-500 hover:text-gray-700 text-sm font-semibold">Cancel</button>
-                                                        <button type="submit" className="bg-teal-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-teal-600 font-semibold">Save Changes</button>
-                                                    </div>
-                                                </form>
-                                            ) : (
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-start justify-between w-full">
-                                                        {config.hasCompleted && <input type="checkbox" checked={item.completed} onChange={() => handleToggleCompleted(item)} className="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mr-4 flex-shrink-0 mt-1"/>}
-                                                        <div className="flex-grow">
-                                                            <p className={`text-gray-800 whitespace-pre-wrap ${item.completed ? 'line-through text-gray-400' : ''}`}>{item.text}</p>
-                                                            {/* Show formatted date/time */}
-                                                            <p className="text-xs text-gray-400 mt-1">{item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Just now'}</p>
+                        {/* Only show the list content if it's the Goals module (which uses a single view) */}
+                        {!isJournal && (
+                            <div className="flex-grow overflow-y-auto pr-2 -mr-2 mt-4"> 
+                                {isLoading ? <Spinner /> : (items.length > 0 ? ( 
+                                    <ul className="space-y-3"> 
+                                        {items.map(item => ( 
+                                            <li key={item.id} className="p-4 bg-gray-50 rounded-lg shadow-sm">
+                                                {/* Goals inline editing logic */}
+                                                {editingItem?.id === item.id ? (
+                                                    <form onSubmit={handleUpdateGoals} className="space-y-2">
+                                                        <textarea
+                                                            value={editedText}
+                                                            onChange={(e) => setEditedText(e.target.value)}
+                                                            className="w-full p-2 border border-teal-500 rounded-lg resize-none"
+                                                            rows={2}
+                                                        />
+                                                        <div className="flex justify-end gap-2">
+                                                            <button type="button" onClick={() => setEditingItem(null)} className="text-gray-500 hover:text-gray-700 text-sm font-semibold">Cancel</button>
+                                                            <button type="submit" className="bg-teal-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-teal-600 font-semibold">Save Changes</button>
                                                         </div>
-                                                    </div>
-                                                    <div className="flex justify-end mt-2 space-x-2">
-                                                        {isJournal ? (
-                                                            // Journal edit loads to main box
-                                                            <button onClick={() => handleStartEditJournal(item)} className="text-gray-500 hover:text-blue-600 text-xs font-semibold flex items-center gap-1">
-                                                                <EditIcon /> Edit
-                                                            </button>
-                                                        ) : (
-                                                            // Goals edit loads inline
+                                                    </form>
+                                                ) : (
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-start justify-between w-full">
+                                                            {config.hasCompleted && <input type="checkbox" checked={item.completed} onChange={() => handleToggleCompleted(item)} className="h-5 w-5 rounded border-gray-300 text-teal-600 focus:ring-teal-500 mr-4 flex-shrink-0 mt-1"/>}
+                                                            <div className="flex-grow">
+                                                                <p className={`text-gray-800 whitespace-pre-wrap ${item.completed ? 'line-through text-gray-400' : ''}`}>{item.text}</p>
+                                                                <p className="text-xs text-gray-400 mt-1">{item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Just now'}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex justify-end mt-2 space-x-2">
                                                             <button onClick={() => handleEditGoals(item)} className="text-gray-500 hover:text-blue-600 text-xs font-semibold flex items-center gap-1">
                                                                 <EditIcon /> Edit
                                                             </button>
-                                                        )}
-                                                        <button onClick={() => handleDeleteItem(item.id)} className="text-gray-500 hover:text-red-500 text-xs font-semibold flex items-center gap-1">
-                                                            <TrashIcon /> Delete
-                                                        </button>
+                                                            <button onClick={() => handleDeleteItem(item.id)} className="text-gray-500 hover:text-red-500 text-xs font-semibold flex items-center gap-1">
+                                                                <TrashIcon /> Delete
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                        </li> 
-                                    ))} 
-                                </ul> 
-                            ) : ( <div className="text-center py-10"><p className="text-gray-500">{config.emptyState}</p></div> ))} 
-                        </div> 
+                                                )}
+                                            </li> 
+                                        ))} 
+                                    </ul> 
+                                ) : ( <div className="text-center py-10"><p className="text-gray-500">{config.emptyState}</p></div> ))} 
+                            </div> 
+                        )}
                     </div> 
                 );
             };
@@ -735,38 +885,14 @@
         const DailyJournal = createListModule({ collectionName: 'journal', title: 'Daily Journal', prompt: 'How are you feeling? You can write about your day, feelings, or things you are grateful for.', placeholder: 'Write your entry...', emptyState: 'No journal entries yet.', useGemini: true });
         const Goals = createListModule({ collectionName: 'goals', title: 'My Goals', prompt: 'Set small, achievable goals for your recovery.', placeholder: 'e.g., Attend a meeting or Call my sponsor tonight', emptyState: 'No goals set yet.', hasCompleted: true });
 
-        // --- COMPONENT: Resources (Unchanged) ---
+        // --- COMPONENT: Resources (S.O.S.) ---
         const Resources = () => ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"><h2 className="text-2xl font-bold text-gray-800 mb-2">S.O.S. Resources</h2><p className="text-gray-600 mb-6">You are not alone. Help is available.</p><ul className="space-y-4"> {[{ name: "SAMHSA National Helpline", number: "1-800-662-4357", description: "Confidential free help to find substance use treatment and information." }, { name: "National Suicide Prevention Lifeline", number: "988", description: "24/7, free and confidential support for people in distress." }, { name: "Alcoholics Anonymous (A.A.)", link: "https://www.aa.org", description: "Find local and online meetings and resources." }, { name: "Narcotics Anonymous (N.A.)", link: "https://www.na.org", description: "Find local and online meetings and resources." }].map(item => ( <li key={item.name} className="p-4 bg-gray-50 rounded-lg shadow-sm"><h3 className="font-bold text-teal-700">{item.name}</h3><p className="text-gray-600 my-1">{item.description}</p>{item.number && <a href={`tel:${item.number}`} className="text-blue-600 font-semibold hover:underline">{item.number}</a>}{item.link && <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold hover:underline">Visit Website</a>}</li> ))}</ul></div> );
 
         // --- COMPONENT: Meeting Finder ---
-        const MEETING_LINKS = {
-            AA: {
-                name: "Alcoholics Anonymous (AA)",
-                description: "Find local, in-person, or online AA meetings.",
-                link: "https://www.aa.org/find-meetings",
-                instructions: "The official AA website provides local directories and search tools."
-            },
-            NA: {
-                name: "Narcotics Anonymous (NA)",
-                description: "Find local and online NA meetings.",
-                link: "https://www.na.org/meetingsearch/",
-                instructions: "Use the NA Meeting Locator to find times and locations in your area."
-            },
-            CA: {
-                name: "Cocaine Anonymous (CA)",
-                description: "Find CA meetings globally.",
-                link: "https://www.ca.org/meetings/",
-                instructions: "The CA website offers a global directory and online meeting resources."
-            }
-        };
-
         const MeetingFinder = () => {
             const [selectedFellowship, setSelectedFellowship] = useState('AA');
 
             const selectedData = MEETING_LINKS[selectedFellowship];
-
-            // Note: Due to security and sandbox restrictions, we cannot use navigator.geolocation
-            // or access external meeting databases directly. We provide official web links instead.
 
             return (
                 <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col">
@@ -808,18 +934,7 @@
             );
         };
 
-        // --- COMPONENT: Coping Cards (Updated) ---
-        const copingStrategies = [
-            { title: "Deep Breathing", description: "Inhale for 4s, hold for 7s, exhale for 8s. Repeat 3-5 times.", category: "Grounding", color: "from-blue-100 to-indigo-200", icon: MapPinIcon },
-            { title: "5-4-3-2-1 Method", description: "Name: 5 things you see, 4 you feel, 3 you hear, 2 you smell, 1 you taste.", category: "Grounding", color: "from-blue-100 to-indigo-200", icon: MapPinIcon },
-            { title: "Go for a Walk", description: "A 10-15 minute walk can change your scenery and mindset.", category: "Action", color: "from-green-100 to-emerald-200", icon: PhoneIcon },
-            { title: "Play the Tape Through", description: "Think about the full consequences of giving in to a craving.", category: "Cognitive", color: "from-pink-100 to-red-200", icon: ShieldIcon },
-            { title: "Call a Friend", description: "Talk about what you're feeling with your support network.", category: "Connection", color: "from-green-100 to-emerald-200", icon: PhoneIcon },
-            { title: "Delay and Distract", description: "Wait 15 minutes. Do something to distract yourself in that time.", category: "Cognitive", color: "from-pink-100 to-red-200", icon: ShieldIcon },
-        ];
-
-        const allCopingCards = copingStrategies;
-
+        // --- COMPONENT: Coping Cards ---
         const CopingCards = ({ onJournal }) => {
             const [currentIndex, setCurrentIndex] = useState(0);
             const card = allCopingCards[currentIndex];
@@ -870,16 +985,34 @@
             );
         };
 
-        // --- COMPONENT: Recovery Literature (Unchanged) ---
+        // --- COMPONENT: Recovery Literature (Reader) ---
         const RecoveryLiterature = () => {
             const [selectedBook, setSelectedBook] = useState(null); const [selectedChapter, setSelectedChapter] = useState(null);
-            const formatContent = (content) => content.split('\n\n').map((paragraph, index) => <p key={index} className="mb-4">{paragraph.trim()}</p>);
-            if (selectedChapter) { return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col"> <button onClick={() => setSelectedChapter(null)} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold flex-shrink-0"><ArrowLeftIcon /><span className="ml-2">Back to Chapters</span></button> <h2 className="text-2xl font-bold text-gray-800 mb-4 flex-shrink-0">{selectedChapter.title}</h2> <div className="prose-lg text-gray-700 overflow-y-auto flex-grow pr-2">{formatContent(selectedChapter.content)}</div> </div> ); }
-            if (selectedBook) { return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"> <button onClick={() => setSelectedBook(null)} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold"><ArrowLeftIcon /><span className="ml-2">Back to Library</span></button> <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold text-gray-800">{selectedBook.title}</h2><a href={selectedBook.pdfLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600"><DownloadIcon />PDF</a></div> <ul className="space-y-3">{selectedBook.chapters.map((chapter, index) => ( <li key={index}><button onClick={() => setSelectedChapter(chapter)} className="w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm"><h3 className="font-semibold text-gray-800">{chapter.title}</h3></button></li> ))}</ul> </div> ); }
-            return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"><h2 className="text-2xl font-bold text-gray-800 mb-2">Recovery Literature</h2><p className="text-gray-600 mb-6">Read or download foundational recovery texts.</p><ul className="space-y-4">{Object.keys(literatureData).map(key => { const book = literatureData[key]; return ( <li key={key} className="p-4 bg-gray-50 rounded-lg shadow-sm"><div className="flex justify-between items-start"><div><h3 className="font-semibold text-gray-800 text-lg">{book.title}</h3></div><a href={book.pdfLink} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 ml-4 flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 text-sm"><DownloadIcon />PDF</a></div><button onClick={() => setSelectedBook(book)} className="mt-4 w-full bg-teal-50 text-teal-700 font-semibold py-2 px-4 rounded-lg hover:bg-teal-100">Read in App</button></li> )})}</ul></div> );
+            // Function to format the content with paragraph breaks
+            const formatContent = (content) => content.split('\n\n').map((paragraph, index) => <p key={index} className="mb-4 whitespace-pre-wrap">{paragraph.trim()}</p>);
+            
+            if (selectedChapter) { 
+                return ( 
+                    <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in h-full flex flex-col"> 
+                        <button onClick={() => setSelectedChapter(null)} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold flex-shrink-0"><ArrowLeftIcon /><span className="ml-2">Back to Chapters</span></button> 
+                        <h2 className="text-2xl font-bold text-gray-800 mb-4 flex-shrink-0">{selectedChapter.title}</h2> 
+                        <div className="prose-lg text-gray-700 overflow-y-auto flex-grow pr-2">{formatContent(selectedChapter.content)}</div> 
+                    </div> 
+                ); 
+            }
+            if (selectedBook) { 
+                return ( 
+                    <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"> 
+                        <button onClick={() => setSelectedBook(null)} className="flex items-center text-teal-600 hover:text-teal-800 mb-4 font-semibold"><ArrowLeftIcon /><span className="ml-2">Back to Library</span></button> 
+                        <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold text-gray-800">{selectedBook.title}</h2><a href={selectedBook.pdfLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600"><DownloadIcon />PDF</a></div> 
+                        <ul className="space-y-3">{selectedBook.chapters.map((chapter, index) => ( <li key={index}><button onClick={() => setSelectedChapter(chapter)} className="w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm"><h3 className="font-semibold text-gray-800">{chapter.title}</h3></button></li> ))}</ul> 
+                    </div> 
+                ); 
+            }
+            return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"><h2 className="text-2xl font-bold text-gray-800 mb-2">Recovery Literature</h2><p className="text-gray-600 mb-6">Read or download foundational recovery texts.</p><ul className="space-y-4">{Object.keys(literatureData).map(key => { const book = literatureData[key]; return ( <li key={key}> <div className="p-4 bg-gray-50 rounded-lg shadow-sm"> <div className="flex justify-between items-start"> <div><h3 className="font-semibold text-gray-800 text-lg">{book.title}</h3></div> <a href={book.pdfLink} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 ml-4 flex items-center gap-2 bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 text-sm"><DownloadIcon />PDF</a> </div> <button onClick={() => setSelectedBook(book)} className="mt-4 w-full bg-teal-50 text-teal-700 font-semibold py-2 px-4 rounded-lg hover:bg-teal-100">Read in App</button> </div> </li> ); })}</ul></div> );
         };
 
-        // --- COMPONENT: Recovery Workbook (Updated with Detailed Questions) ---
+        // --- COMPONENT: Recovery Workbook (Data Structure) ---
         const workbookData = {
             generalRecovery: { title: "General Recovery Exercises", description: "Core exercises for your recovery.", topics: [ { id: 'understanding-addiction', title: 'Understanding My Addiction', prompt: 'Reflect on when your addiction started. What were the circumstances? How has it impacted your life, relationships, and health? Write openly about your journey with the substance or behavior.' }, { id: 'identifying-triggers', title: 'Identifying Triggers', prompt: 'What situations, feelings, people, or places make you want to use? List as many as you can. For each trigger, think about why it affects you and how you have reacted in the past.' }, { id: 'coping-strategies', title: 'Developing Coping Strategies', prompt: 'For each trigger you identified, brainstorm a healthy coping strategy. What can you do instead of turning to your addiction? Examples: call a sponsor, go for a walk, practice deep breathing, listen to music.' }, { id: 'building-support', title: 'Building a Support Network', prompt: 'Who are the supportive, trustworthy people in your life? List their names and how they can help. Who do you need to distance yourself from? How will you build new, healthy relationships?' }, { id: 'vision-for-future', title: 'My Vision for a Sober Future', prompt: 'Describe the life you want to live in recovery. What are your goals for your career, family, health, and personal growth? Be specific and imagine how good it will feel to achieve these things.' }, { id: 'relapse-prevention', title: 'Relapse Prevention Plan', prompt: 'Acknowledge that recovery is a process. What are your personal warning signs that you might be heading for a relapse? Create a step-by-step plan of action for what you will do if you feel an urge or craving.' } ] },
             
@@ -1269,19 +1402,21 @@
             }
         };
 
+
+        // --- WORKBOOK COMPONENTS ---
         const WorkbookQuestion = ({ questionText, questionKey }) => {
             const [response, setResponse] = useState('');
             const [saveStatus, setSaveStatus] = useState('');
             const isInitialLoad = useRef(true);
 
-            // 1. Load Data Effect (Runs only when questionKey changes, i.e., when loading a new Step/Topic)
+            // 1. Load Data Effect 
             useEffect(() => {
                 const data = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
                 setResponse(data[questionKey] || '');
                 setSaveStatus('Initial Load');
             }, [questionKey]);
 
-            // 2. Debounce Save Effect (Runs whenever response changes after initial load)
+            // 2. Debounce Save Effect 
             useEffect(() => {
                 // Skips saving on initial load, only runs when user types
                 if (isInitialLoad.current) {
@@ -1328,10 +1463,8 @@
             // Generate unique key prefix for questions in this section
             const keyPrefix = `${stepId}-${section.title.charAt(0)}`; 
             
-            // Effect to recalculate max-height when component mounts or expands
             useEffect(() => {
                 if (!isCollapsed && contentRef.current) {
-                    // Force DOM recalculation to get actual scroll height
                     contentRef.current.style.maxHeight = `${contentRef.current.scrollHeight}px`;
                 }
             }, [isCollapsed]);
@@ -1349,7 +1482,7 @@
                     <div 
                         ref={contentRef}
                         style={{
-                            maxHeight: isCollapsed ? '0' : '9999px', // Set a large height for smooth transition when opening
+                            maxHeight: isCollapsed ? '0' : '9999px', // Use large value for smooth transition
                             transition: 'max-height 0.4s ease-in-out',
                         }}
                         className="overflow-hidden p-4 bg-white"
@@ -1432,6 +1565,7 @@
                 const loadedData = LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {};
                 setWorkbookResponses(loadedData);
                 
+                // Simple way to detect changes from other tabs/windows
                 const handleStorageChange = (e) => {
                     if (e.key === LocalDataStore.KEYS.WORKBOOK) {
                         setWorkbookResponses(LocalDataStore.load(LocalDataStore.KEYS.WORKBOOK) || {});
@@ -1444,26 +1578,32 @@
             const completedTopicIds = useMemo(() => {
                 const completed = new Set();
                 
-                // 1. Check General Recovery Topics
-                workbookData.generalRecovery.topics.forEach(topic => {
-                    if (workbookResponses[topic.id] && workbookResponses[topic.id].trim().length > 0) {
-                        completed.add(topic.id);
-                    }
-                });
+                // Check all topics for content
+                Object.values(workbookData).forEach(category => {
+                    if (category && category.topics) {
+                        category.topics.forEach(topic => {
+                            let topicHasContent = false;
+                            
+                            if (topic.sections) {
+                                // 12-Step Topics: Check if any question in any section has content
+                                topic.sections.forEach(section => {
+                                    section.questions.forEach((_, index) => {
+                                        // Key structure: step-1-A-1, step-1-A-2, etc.
+                                        const key = `${topic.id}-${section.title.charAt(0)}-${index + 1}`;
+                                        if (workbookResponses[key] && workbookResponses[key].trim().length > 0) {
+                                            topicHasContent = true;
+                                        }
+                                    });
+                                });
+                            } else if (workbookResponses[topic.id] && workbookResponses[topic.id].trim().length > 0) {
+                                // General Topics: Check for content in the single question field
+                                topicHasContent = true;
+                            }
 
-                // 2. Check 12-Step Topics
-                workbookData.twelveSteps.topics.forEach(step => {
-                    let stepHasContent = false;
-                    step.sections.forEach(section => {
-                        section.questions.forEach((_, index) => {
-                            const key = `${step.id}-${section.title.charAt(0)}-${index + 1}`;
-                            if (workbookResponses[key] && workbookResponses[key].trim().length > 0) {
-                                stepHasContent = true;
+                            if (topicHasContent) {
+                                completed.add(topic.id);
                             }
                         });
-                    });
-                    if (stepHasContent) {
-                        completed.add(step.id);
                     }
                 });
 
@@ -1472,7 +1612,7 @@
             }, [workbookResponses]);
 
             const calculateCompletion = useCallback((key) => {
-                const topics = workbookData[key].topics;
+                const topics = workbookData[key]?.topics || [];
                 const completed = topics.filter(t => completedTopicIds.includes(t.id)).length;
                 const total = topics.length;
                 return { completed, total, percentage: total > 0 ? Math.round((completed / total) * 100) : 0 };
@@ -1489,8 +1629,9 @@
             if (selectedTopic) return <WorkbookTopic topic={selectedTopic} onBack={() => setSelectedTopic(null)} />;
             if (activeCategory) return <WorkbookCategory category={activeCategory} onSelectTopic={setSelectedTopic} onBack={() => setActiveCategory(null)} completedTopicIds={completedTopicIds} />;
             
-            return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"> <h2 className="text-2xl font-bold text-gray-800 mb-2">Recovery Workbook</h2> <p className="text-gray-600 mb-6">Track your progress.</p> <div className="mb-6"> <div className="flex justify-between items-center mb-1"> <span className="text-sm font-semibold text-gray-600">Overall Progress</span> <span className="text-sm font-semibold text-teal-600">{overallCompletion.percentage}%</span> </div> <div className="w-full bg-gray-200 rounded-full h-2.5"><div className="bg-teal-500 h-2.5 rounded-full" style={{ width: `${overallCompletion.percentage}%` }}></div></div> </div> <ul className="space-y-4"> {Object.keys(workbookData).map(key => { const { completed, total, percentage } = calculateCompletion(key); return ( <li key={key}> <button onClick={() => setActiveCategory(workbookData[key])} className="w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm"> <h3 className="font-semibold text-gray-800 text-lg">{workbookData[key].title}</h3> <p className="text-gray-600 mt-1 text-sm">{workbookData[key].description}</p> <div className="mt-3"> <div className="flex justify-between items-center mb-1"> <span className="text-xs font-semibold text-gray-500">{completed} / {total} Completed</span> <span className="text-xs font-semibold text-teal-600">{percentage}%</span> </div> <div className="w-full bg-gray-200 rounded-full h-1.5"><div className="bg-teal-500 h-1.5 rounded-full" style={{ width: `${percentage}%` }}></div></div> </div> </button> </li> ); })} </ul> </div> );
+            return ( <div className="bg-white p-6 rounded-xl shadow-lg animate-fade-in"> <h2 className="text-2xl font-bold text-gray-800 mb-2">Recovery Workbook</h2> <p className="text-gray-600 mb-6">Track your progress.</p> <div className="mb-6"> <div className="flex justify-between items-center mb-1"> <span className="text-sm font-semibold text-gray-600">Overall Progress</span> <span className="text-sm font-semibold text-teal-600">{overallCompletion.percentage}%</span> </div> <div className="w-full bg-gray-200 rounded-full h-2.5"><div className="bg-teal-500 h-2.5 rounded-full" style={{ width: `${overallCompletion.percentage}%` }}></div></div> </div> <ul className="space-y-4"> {Object.keys(workbookData).map(key => { const category = workbookData[key]; if (!category) return null; const { completed, total, percentage } = calculateCompletion(key); return ( <li key={key}> <button onClick={() => setActiveCategory(category)} className="w-full text-left p-4 bg-gray-50 hover:bg-teal-50 rounded-lg shadow-sm"> <h3 className="font-semibold text-gray-800 text-lg">{category.title}</h3> <p className="text-gray-600 mt-1 text-sm">{category.description}</p> <div className="mt-3"> <div className="flex justify-between items-center mb-1"> <span className="text-xs font-semibold text-gray-500">{completed} / {total} Completed</span> <span className="text-xs font-semibold text-teal-600">{percentage}%</span> </div> <div className="w-full bg-gray-200 rounded-full h-1.5"><div className="bg-teal-500 h-1.5 rounded-full" style={{ width: `${percentage}%` }}></div></div> </div> </button> </li> ); })} </ul> </div> );
         };
+
 
         // --- COMPONENT: Page Footer ---
         const PageFooter = ({ activeView }) => {
@@ -1529,8 +1670,18 @@
             // Load sobriety date from localStorage on mount
             useEffect(() => {
                 const storedDate = LocalDataStore.load(LocalDataStore.KEYS.SOBRIETY);
-                if (storedDate) {
-                    setSobrietyStartDate(new Date(storedDate));
+                if (storedDate && storedDate !== 'null') { 
+                    try {
+                        const dateObj = new Date(storedDate);
+                        if (!isNaN(dateObj.getTime())) {
+                            setSobrietyStartDate(dateObj);
+                        } else {
+                            console.error("Invalid date format in localStorage.");
+                        }
+                    } catch (e) {
+                        console.error("Error parsing sobriety date:", e);
+                        setSobrietyStartDate(null); // Reset if invalid
+                    }
                 }
                 setIsDataLoading(false);
             }, []);
@@ -1558,7 +1709,8 @@
             const renderContent = () => {
                 if (isAuthLoading || isDataLoading) return <div className="h-full flex items-center justify-center"><Spinner /></div>;
                 
-                if (!sobrietyStartDate) return <SobrietyDataSetup onDateSet={setSobrietyStartDate} />;
+                // If sobriety date is null or invalid, show setup
+                if (!sobrietyStartDate || isNaN(sobrietyStartDate.getTime())) return <SobrietyDataSetup onDateSet={setSobrietyStartDate} />;
                 
                 if (sobrietyStartDate) {
                     switch (activeView) {
@@ -1615,8 +1767,17 @@
 
         // Initialize and render the App component
         const container = document.getElementById('root');
-        const root = ReactDOM.createRoot(container);
-        root.render(<App />);
+        
+        // This check is a safeguard, but in this environment, React is expected to be global
+        if (window.ReactDOM) {
+             const root = window.ReactDOM.createRoot(container);
+             root.render(<App />);
+        } else {
+             console.error("ReactDOM not found. Check if the CDN scripts are loading correctly.");
+             if (container) {
+                 container.innerHTML = '<h1 style="color: red; text-align: center; margin-top: 50px;">Error: Failed to load React components. Check your script console.</h1>';
+             }
+        }
     </script>
 </body>
 </html>
